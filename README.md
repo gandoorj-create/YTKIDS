@@ -6,7 +6,7 @@ No camera and no drawing app are needed.
 ## The channel
 
 - Name: **Yumizoo** (yummy + zoo).
-- Main character: a chestnut **foal** (baby horse) with a white star on its forehead. Its name is not chosen yet.
+- Main character: **Maple**, a chestnut foal (baby horse) with a white star on its forehead.
 - Friends: **Wobbaloo** (a jelly that can be any color), Cupcake and Marshmallow.
 - Pictures of all of them are in `designs/`.
 
