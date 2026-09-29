@@ -1,0 +1,9 @@
+pillow
+numpy
+imageio-ffmpeg
+piper-tts
+zstandard
+fonttools
+brotli
+# 3D (foal3d.py) also needs Blender as a Python module (about 370 MB):
+# bpy
