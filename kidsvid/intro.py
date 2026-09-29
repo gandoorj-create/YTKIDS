@@ -1,6 +1,6 @@
 """The Yumizoo channel intro (jingle).
 
-Wobbaloo the jelly falls in and "sings" the name: the tune plays "Yu-mi-zoo" three times, the logo
+Maple the foal gallops in and "sings" the name: the tune plays "Yu-mi-zoo" three times, the logo
 letters land on the notes, and at the end everybody shouts "Yumizoo!".
 """
 import math
@@ -13,7 +13,7 @@ from .show import FPS, Actor, Show
 
 BPM = 124
 BEAT = 60 / BPM
-START = 0.5                  # the music starts when Wobbaloo has landed
+START = 0.8                  # the music starts when Maple has galloped in
 SHOUT_BEAT = 6.5             # "Yumizoo!"
 LENGTH = START + 8 * BEAT + 1.4
 PINK = (255, 110, 170)       # Wobbaloo's own color
@@ -91,11 +91,13 @@ def crash(seconds=1.6):
     return np.diff(sound.RNG.uniform(-1, 1, n + 1)) * sound.env(n, 0.002, 0.45)
 
 
-def fall_whistle(seconds=0.45):
-    """Cartoon "falling" sound: a whistle going down."""
-    t = sound.t_axis(seconds)
-    f = 1300 * (300 / 1300) ** (t / seconds)
-    return np.sin(2 * np.pi * np.cumsum(f) / sound.SR) * np.minimum(1, (seconds - t) / 0.05) * 0.7
+def clop(pitch=1.0):
+    """One hoof step: a hollow wooden "clop"."""
+    t = sound.t_axis(0.12)
+    x = (np.sin(2 * np.pi * 700 * pitch * t) * np.exp(-t / 0.018)
+         + 0.6 * np.sin(2 * np.pi * 1750 * pitch * t) * np.exp(-t / 0.01)
+         + 0.3 * sound.RNG.uniform(-1, 1, len(t)) * np.exp(-t / 0.005))
+    return 0.8 * x
 
 
 def jingle_music(tune):
@@ -147,7 +149,7 @@ def kid_voice(voice, text, pitch, speed=0.95):
 def group_shout(voice, text=f"{NAME}!"):
     """A lead child and four friends shout together (a little after each other, with different voices).
 
-    Returns (group sound, lead voice only) - the lead voice moves Wobbaloo's mouth.
+    Returns (group sound, lead voice only) - the lead voice moves Maple's mouth.
     """
     parts, lead = [], None
     for pitch, gain, delay in KIDS:
@@ -172,18 +174,22 @@ def wobble(t, impacts):
     return sx, sy
 
 
-class Wobbaloo:
-    """The jelly: falls in, wobbles, hops on every "zoo", opens its mouth on every note."""
+class Maple:
+    """The foal: gallops in, hops on every "zoo", opens its mouth on every note."""
     z = 3
 
-    def __init__(self, x, y, scale, land, notes, shout_at, shout_levels, color=PINK):
-        self.x, self.y, self.scale, self.land = x, y, scale, land
-        self.sprites = {(e, m): art.jelly(color, e, m) for e in ("open", "blink", "happy") for m in range(6)}
+    def __init__(self, x, y, scale, arrive, notes, shout_at, shout_levels):
+        self.x, self.y, self.scale, self.arrive = x, y, scale, arrive
+        self.sprites = {(e, m): art.foal("zeerd", e, m) for e in ("open", "blink", "happy") for m in range(6)}
         self.sing = [(at(n[0]), n[2] * BEAT) for n in notes]
         zoo = [(at(n[0]), n[2]) for k, n in enumerate(notes) if k % 3 == 2]  # every third note is "zoo"
-        self.hops = [(t, 120 if beats > 1 else 60, 0.5 if beats > 1 else 0.36) for t, beats in zoo]
-        self.impacts = [(land, 0.22)] + [(t + d, 0.12) for t, _, d in self.hops]
+        self.hops = [(t, 90 if beats > 1 else 50, 0.5 if beats > 1 else 0.36) for t, beats in zoo]
+        self.impacts = [(arrive, 0.08)] + [(t + d, 0.06) for t, _, d in self.hops]
         self.shout_at, self.shout_levels = shout_at, shout_levels
+
+    def steps(self):
+        """Times when a hoof hits the ground while galloping in."""
+        return [self.arrive * k / 3 for k in (1, 2, 3)]
 
     def mouth(self, t):
         k = int((t - self.shout_at) * FPS)
@@ -196,23 +202,23 @@ class Wobbaloo:
         return 0
 
     def draw(self, fr, t):
-        if t < self.land - 0.45:
-            return
-        y = self.y
-        if t < self.land:  # falling, a little stretched
-            p = (t - (self.land - 0.45)) / 0.45
-            y = -350 + (self.y + 350) * p * p
-            sx, sy = 0.9, 1.12
+        x, y = self.x, self.y
+        if t < self.arrive:  # gallops in from the left with three hops
+            p = t / self.arrive
+            x = -320 + (self.x + 320) * (1 - (1 - p) ** 2)
+            h = abs(math.sin(3 * math.pi * p)) * (1 - 0.3 * p)
+            y -= 90 * h
+            sx, sy = 1 - 0.04 * h, 1 + 0.06 * h
         else:
             sx, sy = wobble(t, self.impacts)
             for start, height, length in self.hops:
                 if 0 <= t - start < length:
                     y -= height * math.sin(math.pi * (t - start) / length)
-            jiggle = 0.012 * math.sin(2 * math.pi * 1.7 * t)
-            sx, sy = sx * (1 - jiggle), sy * (1 + jiggle)
-        eyes = "happy" if t >= self.shout_at else "blink" if 2.2 <= t < 2.33 else "open"
-        place(fr, self.sprites[(eyes, self.mouth(t))], self.x, y, self.scale * sx, self.scale * sy,
-              anchor=art.JELLY_BOTTOM)
+            breath = 0.01 * math.sin(2 * math.pi * 1.2 * t)
+            sx, sy = sx * (1 - breath), sy * (1 + breath)
+        eyes = "happy" if t >= self.shout_at else "blink" if 2.5 <= t < 2.63 else "open"
+        place(fr, self.sprites[(eyes, self.mouth(t))], x, y, self.scale * sx, self.scale * sy,
+              anchor=art.FOAL_FEET)
 
 
 class Logo:
@@ -255,17 +261,18 @@ def build(voice, tune, shout, label=None):
     notes = TUNES[tune]["notes"]
     show = Show(voice, mascot=False)
     show.music = jingle_music(tune)
-    show.music_level, show.duck = 0.1, 0.2  # music below the voice, and very quiet for the shout
+    show.music_level, show.duck = 0.08, 0.2  # music below the voice, and very quiet for the shout
     shout_at = at(SHOUT_BEAT)
     show.voices.append((shout_at, group))
-    show.sfx(0.0, fall_whistle(), 0.3)
-    show.sfx(START - 0.05, sound.sfx_boing(), 0.4)
-    show.add(Wobbaloo(960, 1010, 1.0, START - 0.05, notes, shout_at, sound.mouth_levels(main, FPS)))
+    maple = show.add(Maple(960, 1010, 0.9, START - 0.1, notes, shout_at, sound.mouth_levels(main, FPS)))
+    for k, step in enumerate(maple.steps()):
+        show.sfx(step - 0.035, clop(1.0), 0.4)
+        show.sfx(step + 0.035, clop(1.3 if k % 2 else 1.18), 0.35)
     show.add(Logo(notes, 960, 330, 210, shout_at))
     zoo_end = at(notes[-1][0])
-    for (thing, bottom), x, beat in (((art.cupcake(), (250, 470)), 470, notes[3][0]),
-                                     ((art.marshmallow(), (240, 446)), 1450, notes[5][0])):
-        show.add(Actor(thing, bottom, at(beat), LENGTH + 1, x, 1000, scale=0.72, jumps=[zoo_end, shout_at]))
+    for (thing, bottom, scale), x, beat in (((art.jelly(PINK), art.JELLY_BOTTOM, 0.62), 440, notes[3][0]),
+                                            ((art.cupcake(), (250, 470), 0.72), 1480, notes[5][0])):
+        show.add(Actor(thing, bottom, at(beat), LENGTH + 1, x, 1000, scale=scale, jumps=[zoo_end, shout_at]))
         show.sfx(at(beat), sound.sfx_pop(), 0.35)
     for k, n in enumerate((84, 88, 91)):  # short sparkle (a long bell would ring under the shout)
         show.sfx(zoo_end + 0.06 * k, sound.marimba(n, 0.5), 0.2)

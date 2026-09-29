@@ -45,7 +45,7 @@ To add a new thing (for example a car), add a drawing function to `kidsvid/art.p
 
 `python3 make_intro.py` makes 3 versions of the 6-second intro (tunes: chant, rising, wobbly) and
 `intro_all.mp4` with all 3 in a row. The logo letters land on the notes, and at the end kids shout "Yumizoo!".
-The intro still shows Wobbaloo; it will change to the foal.
+Maple gallops in and "sings" every note; Wobbaloo and Cupcake join.
 
 ## 3D foal
 
