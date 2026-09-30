@@ -6,9 +6,10 @@ No camera and no drawing app are needed.
 ## The channel
 
 - Name: **Yumizoo** (yummy + zoo).
-- Main character: **Maple**, a chestnut foal (baby horse) with a white star on its forehead.
-- Friends: **Wobbaloo** (a jelly that can be any color), Cupcake and Marshmallow.
-- Pictures of all of them are in `designs/`.
+- Two main characters: a very chubby **puppy** and a very chubby **kitten** (names and colors not chosen yet,
+  see `designs/main_characters.jpg`).
+- Earlier ideas are still in the code and in `designs/`: the foal Maple (also in 3D), the jelly Wobbaloo,
+  Cupcake, Marshmallow and the lamb.
 
 ## Episode 1: "Learn Colors for Kids" (about 5 minutes)
 
@@ -45,7 +46,7 @@ To add a new thing (for example a car), add a drawing function to `kidsvid/art.p
 
 `python3 make_intro.py` makes 3 versions of the 6-second intro (tunes: chant, rising, wobbly) and
 `intro_all.mp4` with all 3 in a row. The logo letters land on the notes, and at the end kids shout "Yumizoo!".
-Maple gallops in and "sings" every note; Wobbaloo and Cupcake join.
+It still shows the foal Maple with Wobbaloo and Cupcake; it will change to the puppy and the kitten.
 
 ## 3D foal
 
