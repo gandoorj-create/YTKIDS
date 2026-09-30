@@ -116,6 +116,7 @@ class Show:
         self.bursts = []         # confetti: (time, origin, pieces)
         self.chapters = []       # (time, name)
         self.snaps = []          # (time, name): moments for the preview pictures
+        self.questions = []      # (start, end, thing, color) of every quiz question (make_shorts.py uses them)
         self.loud_music = []     # (start, end): parts where the music melody plays loud
         self.happy_from = None   # from this time the lamb keeps happy eyes
         self.fade = 0.8          # seconds of fading to black at the end

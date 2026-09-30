@@ -131,6 +131,17 @@ Why it is made like this (research, September 2026):
   ([Whizzy Studios](https://www.whizzystudios.com/post/kids-animation-trends-2026-whats-growing-on-youtube)):
   one clear action at a time, and a small new surprise that makes kids want to see what the characters do.
 
+## Shorts
+
+```bash
+python3 make_shorts.py             # output/shorts/short_1.mp4, short_2.mp4 and shorts_youtube.txt
+python3 make_shorts.py --preview   # only still pictures (fast)
+```
+
+Two Shorts (1080x1920, about 40 seconds each) from Episode 1's guessing game, 5 questions in each. The episode is
+made again from the same building blocks and drawn standing up: "Guess the color!" on top, the questions in a
+"TV" in the middle, and Maple and Domi big at the bottom, moving and talking as in the episode.
+
 ## Channel pictures
 
 `python3 make_channel_art.py` makes the YouTube profile picture `channel_avatar.png` (800x800, YouTube shows it
@@ -158,6 +169,7 @@ python3 foal3d.py --preview
 | `make_episode1.py` | Episode 1: which parts, colors and things |
 | `make_scene.py` | A video from a scene file (the movements you choose) |
 | `scenes/` | Scene files: `example.txt`, `catalog.txt` (every movement) |
+| `make_shorts.py` | YouTube Shorts (standing up) from the guessing game |
 | `make_channel_art.py` | The YouTube profile picture and banner |
 | `make_intro.py` | The channel intro, "Peek-a-boo! Yu-mi-zoo!" (3 surprises) |
 | `foal3d.py` | The foal in 3D (Blender) |

@@ -87,6 +87,7 @@ def quiz_round(show, thing, color, answer, asker=HOST):
     show.sfx(reveal, sound.sfx_chime(), 0.5)
     show.cheer(reveal, STAGE)
     show.sfx(end - 0.4, sound.sfx_whoosh(), 0.3)
+    show.questions.append((t0, end + 0.15, thing, color))
     show.t = end + 0.15
     return reveal
 
