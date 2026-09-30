@@ -210,6 +210,22 @@ class Show:
         times = [0.0] + [t + offset for t, _ in self.chapters[1:]]
         return "\n".join(f"{int(t // 60)}:{int(t % 60):02d} {name}" for t, (_, name) in zip(times, self.chapters))
 
+    def add_chapters(self, path, offset=0.0):
+        """Put the chapters into the video file too. Video players show them, and make_short.py makes
+        Shorts from whole chapters. The file is not encoded again."""
+        times = [0.0] + [t + offset for t, _ in self.chapters[1:]] + [self.t + offset]
+        names = [re.sub(r"([=;#\\\n])", r"\\\1", name) for _, name in self.chapters]  # the file format wants \=
+        meta = path.with_name(path.stem + "_chapters.txt")
+        meta.write_text(";FFMETADATA1\n" + "".join(
+            f"[CHAPTER]\nTIMEBASE=1/1000\nSTART={round(a * 1000)}\nEND={round(b * 1000)}\ntitle={name}\n"
+            for a, b, name in zip(times, times[1:], names)))
+        tmp = path.with_name(path.stem + "_chapters.mp4")
+        subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error", "-i", str(path),
+                        "-f", "ffmetadata", "-i", str(meta), "-map", "0", "-map_chapters", "1", "-c", "copy",
+                        "-movflags", "+faststart", str(tmp)], check=True)
+        tmp.replace(path)
+        meta.unlink()
+
     # ----- drawing -----
 
     def _prepare(self):

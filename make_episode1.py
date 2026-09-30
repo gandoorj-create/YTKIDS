@@ -140,11 +140,14 @@ def main():
         stills = show.preview()
     elif args.no_intro:
         stills = show.render(Path(args.out))
+        show.add_chapters(Path(args.out))
     else:
         body, opening = OUT / "episode1_no_intro.mp4", OUT / f"intro_{INTRO}.mp4"
         stills = show.render(body)
         make_intro(voice, opening)
         join([opening, body], Path(args.out))
+        show.add_chapters(Path(args.out), offset)
+        show.add_chapters(body)
     contact_sheet(list(stills.values()), OUT / "episode1_preview.jpg")
     if not args.preview:  # the voice is a little different every time, so only the made video has true times
         (OUT / "episode1_youtube.txt").write_text(YOUTUBE.format(chapters=show.chapters_text(offset)))

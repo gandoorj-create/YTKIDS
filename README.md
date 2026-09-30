@@ -60,7 +60,8 @@ python3 make_episode1.py --no-intro  # without the channel intro at the start
 
 `make_episode1.py` also makes `episode1_thumbnail.jpg` (the YouTube picture) and `episode1_youtube.txt`
 (title, description, chapters; the chapter times include the intro). `episode1_no_intro.mp4` is the same episode
-without the intro.
+without the intro. The chapters are also inside both video files (video players show them, and `make_short.py`
+uses them).
 
 To make a new episode, copy `make_episode1.py` and change the lists at the top (colors, things, questions).
 To add a new thing (for example a car), add a drawing function to `kidsvid/art.py` and put it in `THINGS`.
@@ -133,14 +134,36 @@ Why it is made like this (research, September 2026):
 
 ## Shorts
 
+**From any video, by drag and drop.** On Windows, drag a video onto `make_short.bat` (a few videos at once work
+too). You get 2-3 Shorts (1080x1920) next to the video: `..._short1.mp4`, `..._short2.mp4`, ... and the folder
+opens at the end. In each Short the whole video is in the middle, a big blurry copy of it is behind, the title is
+above the video and the Yumizoo logo below it. The YouTube app covers the top and the bottom of a Short with its
+buttons and words, so the title and the logo stay out of those parts.
+
+```bash
+python3 make_short.py output/episode1_learn_colors.mp4     # 2-3 Shorts; the program picks the parts
+python3 make_short.py VIDEO --start 3:09 --end 3:50 --title "Guess the color!"   # one Short from the part you choose
+```
+
+How the parts are picked:
+
+- A video with chapters: whole chapters of 30-60 seconds (or else 20-60) become Shorts, spread over the video,
+  and the chapter name is the title ("Red!" is written in red). Our episodes have their chapters inside the video
+  file (`make_episode1.py` puts them there). A `.txt` file next to the video with lines like `0:16 Red`
+  (like `episode1_youtube.txt`) works too.
+- Other videos: 2-3 parts of about 40 seconds, spread over the video (not the first and the last seconds), cut
+  where nobody talks. The program asks for the words on top (or press Enter for none).
+
+From Episode 1 it makes three Shorts: Red (0:16-0:59), Yellow (1:42-2:25) and Green (2:25-3:09).
+
+**Made again, standing up.** `make_shorts.py` makes two Shorts from Episode 1's guessing game, 5 questions in
+each. The episode is made again from the same building blocks and drawn standing up: "Guess the color!" on top,
+the questions in a "TV" in the middle, and Maple and Domi big at the bottom, moving and talking as in the episode.
+
 ```bash
 python3 make_shorts.py             # output/shorts/short_1.mp4, short_2.mp4 and shorts_youtube.txt
 python3 make_shorts.py --preview   # only still pictures (fast)
 ```
-
-Two Shorts (1080x1920, about 40 seconds each) from Episode 1's guessing game, 5 questions in each. The episode is
-made again from the same building blocks and drawn standing up: "Guess the color!" on top, the questions in a
-"TV" in the middle, and Maple and Domi big at the bottom, moving and talking as in the episode.
 
 ## Channel pictures
 
@@ -169,7 +192,8 @@ python3 foal3d.py --preview
 | `make_episode1.py` | Episode 1: which parts, colors and things |
 | `make_scene.py` | A video from a scene file (the movements you choose) |
 | `scenes/` | Scene files: `example.txt`, `catalog.txt` (every movement) |
-| `make_shorts.py` | YouTube Shorts (standing up) from the guessing game |
+| `make_short.py`, `make_short.bat` | 2-3 YouTube Shorts from any video (drag a video onto the `.bat`) |
+| `make_shorts.py` | YouTube Shorts (made again, standing up) from the guessing game |
 | `make_channel_art.py` | The YouTube profile picture and banner |
 | `make_intro.py` | The channel intro, "Peek-a-boo! Yu-mi-zoo!" (3 surprises) |
 | `foal3d.py` | The foal in 3D (Blender) |
