@@ -179,6 +179,6 @@ python3 foal3d.py --preview
 - Font: Fredoka, SIL Open Font License (`assets/fonts/OFL.txt`). Free to use, also for business.
 - Music and sound effects: made by our own code, so they belong to us.
 - Blender (for the 3D foal) is free software; the pictures we make with it belong to us.
-- Voice: the Piper "jenny_dioco" model. Its license was **not checked yet**
-  (see https://github.com/dioco-group/jenny-tts-dataset). Check it before we post videos that earn money,
-  or change to a paid AI voice that clearly allows business use.
+- Voice: **Jenny (Dioco)**, the Piper "jenny_dioco" model trained on the Jenny dataset
+  (https://github.com/dioco-group/jenny-tts-dataset). Its license allows commercial use. Software that makes audio
+  with it must name the voice "Jenny (Dioco)" (this README does); the videos made with it need no credit.
