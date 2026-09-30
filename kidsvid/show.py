@@ -118,6 +118,7 @@ class Show:
         self.snaps = []          # (time, name): moments for the preview pictures
         self.loud_music = []     # (start, end): parts where the music melody plays loud
         self.happy_from = None   # from this time the lamb keeps happy eyes
+        self.fade = 0.8          # seconds of fading to black at the end
         self.rnd = random.Random(seed)
         self._clips, self._sprites = {}, {}
         self.badges = [art.badge(str(n)) for n in (3, 2, 1)]
@@ -280,7 +281,7 @@ class Show:
         self._confetti(fr, t)
         if self.mascot:
             self._mascot(fr, t, i)
-        fade = progress(t, self.duration - 0.8, 0.8)
+        fade = progress(t, self.duration - self.fade, self.fade) if self.fade else 0
         if fade > 0:
             fr = Image.blend(fr, Image.new("RGB", fr.size), fade)
         return fr

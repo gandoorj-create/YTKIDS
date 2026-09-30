@@ -1,166 +1,86 @@
-"""The Yumizoo channel intro (jingle).
+"""The Yumizoo channel intro: "Peek-a-boo! Yu-mi-zoo!" (about 4.6 seconds).
 
-Maple the foal gallops in and "sings" the name: the tune plays "Yu-mi-zoo" three times, the logo
-letters land on the notes, and at the end everybody shouts "Yumizoo!".
+The puppy and the kitten hide behind a hill. Their ears peek out, then their eyes ("Peek-a..."),
+then they jump up ("...BOO!"). Kids answer with the channel name: "Yu-mi-ZOO!".
+
+Why it is made like this (research notes are in the README, "Channel intro"):
+- short: a branded intro should be about 3-5 seconds, the first seconds decide if people stay;
+- a 6-note tune with the channel name in it: a melody and the name make a sound logo easy to remember;
+- peekaboo, the favorite game of little kids: hiding, then a happy surprise at the expected moment;
+- call and answer: the characters sing "Peek-a-boo!", kids answer "Yu-mi-zoo!", so kids at home learn
+  to shout the answer (children join in more when a video leaves them a part);
+- the tune never changes (so kids know it at once), but a small surprise can change in every episode
+  (GAGS), so the intro stays fun to watch.
 """
 import math
 
 import numpy as np
 
-from . import art, sound
-from .anim import place
-from .show import FPS, Actor, Show
+from . import art, rig, sing, sound
+from .anim import clamp, ease_out_back, ease_out_quad, place
+from .show import Actor, Show
 
-BPM = 124
+BPM = 120
 BEAT = 60 / BPM
-START = 0.8                  # the music starts when Maple has galloped in
-SHOUT_BEAT = 6.5             # "Yumizoo!"
-LENGTH = START + 8 * BEAT + 1.4
-PINK = (255, 110, 170)       # Wobbaloo's own color
+LENGTH = 4.6
 NAME = "Yumizoo"
 SYLLABLES = [(0, 2), (2, 4), (4, 7)]  # letters of "Yu", "mi", "zoo"
+LANDS = (0.3, 0.45, 0.6)              # when each syllable of the logo lands
 
-CHORDS = {"C": (48, (60, 64, 67, 72)), "F": (41, (60, 65, 69, 72)), "G": (43, (59, 62, 67, 71)),
-          "Dm": (38, (62, 65, 69, 74))}
+# The sound logo: (beat, syllable, MIDI note, beats). "uh" is the "a" of "peek-a-boo".
+CALL = [(2, "peek", 64, 0.45), (2.5, "uh", 67, 0.45), (3, "boo", 72, 0.9)]   # E G C: the puppy and the kitten
+ANSWER = [(4, "you", 69, 0.45), (4.5, "me", 67, 0.45), (5, "zoo", 72, 2.0)]  # A G C: the kids answer
+PEEK, BOO, ZOO = 2 * BEAT, 3 * BEAT, 5 * BEAT
+# The kids who answer: (voice size, cents out of tune, seconds late, loudness)
+KIDS = [(1.25, -10, 0.020, 0.7), (1.32, 12, 0.034, 0.6), (1.2, 5, 0.046, 0.55), (1.38, -6, 0.028, 0.5)]
 
-# Three tunes for "Yu-mi-zoo". A note: (beat, MIDI note, length in beats[, slide to note]).
-# Every phrase is 3 notes: "Yu", "mi", "zoo". The last "zoo" is the high, long one.
-TUNES = {
-    "chant": dict(sound="marimba", chords=[(0, "C"), (2, "F"), (4, "G"), (5, "C")], notes=[
-        (0, 79, .5), (.5, 76, .5), (1, 79, 1),
-        (2, 81, .5), (2.5, 79, .5), (3, 76, 1),
-        (4, 79, .5), (4.5, 81, .5), (5, 84, 1.5)]),
-    "rising": dict(sound="pop", chords=[(0, "C"), (2, "Dm"), (4, "C")], notes=[
-        (0, 72, .5), (.5, 76, .5), (1, 79, 1),
-        (2, 74, .5), (2.5, 77, .5), (3, 81, 1),
-        (4, 76, .5), (4.5, 79, .5), (5, 84, 1.5)]),
-    "wobbly": dict(sound="whistle", chords=[(0, "C"), (2, "F"), (4, "G"), (5, "C")], notes=[
-        (0, 72, .5), (.5, 72, .5), (1, 76, 1, 79),
-        (2, 81, .5), (2.5, 81, .5), (3, 79, 1, 76),
-        (4, 74, .5), (4.5, 76, .5), (5, 72, 1.5, 84)]),
+GAGS = {  # the small surprise; the tune is always the same
+    "boo": "both jump up together",
+    "late": "the kitten comes up late and gets a surprise",
+    "flip": "both do a flip in the air",
 }
 
-
-def at(beat):
-    return START + beat * BEAT
-
-
-def mixed(*parts):
-    """Add sounds of different lengths: mixed((sound, gain), ...)."""
-    out = np.zeros(max(len(s) for s, _ in parts))
-    for s, gain in parts:
-        out[:len(s)] += gain * s
-    return out
+HILL = (960, 1300, 1250, 470)  # the hill in front: an oval (middle x, middle y, half width, half height)
+SIZE = 0.9
+SPOTS = {"puppy": 660, "kitten": 1260}
+EARS = {"puppy": 200, "kitten": 150}  # how much shows when only the ears peek (y in the character picture)
+LOGO = (960, 330, 250)                # x, y of the letters' bottom line, letter size
 
 
-# ---------- melody instruments ----------
-
-def pop_tone(note, seconds):
-    """Bright, bubbly synth with a little "blip" at the start."""
-    t = sound.t_axis(seconds + 0.25)
-    f = sound.hz(note) * (1 + 0.6 * np.exp(-t / 0.012))
-    ph = 2 * np.pi * np.cumsum(f) / sound.SR
-    x = sum(np.sin(k * ph) / k for k in (1, 3, 5, 7))
-    return 0.8 * x * sound.env(len(t), 0.004, 0.12 + 0.35 * seconds)
+def hill_top(x):
+    cx, cy, rx, ry = HILL
+    return cy - ry * math.sqrt(max(0.0, 1 - ((x - cx) / rx) ** 2))
 
 
-def whistle(note, seconds, slide_to=None):
-    """Slide whistle: can glide from one note to another, and wobbles more and more (like jelly)."""
-    t = sound.t_axis(seconds)
-    target = note if slide_to is None else slide_to
-    p = np.clip(t / (0.6 * seconds), 0, 1)
-    pitch = note + (target - note) * p * p * (3 - 2 * p)
-    pitch += (0.08 + 0.35 * t / seconds) * np.sin(2 * np.pi * 6.5 * t)
-    ph = 2 * np.pi * np.cumsum(sound.hz(pitch)) / sound.SR
-    x = np.sin(ph) + 0.12 * np.sin(2 * ph)
-    e = np.minimum(1, t / 0.025) * np.minimum(1, (seconds - t) / 0.06)
-    return 0.8 * x * e
+def hill():
+    """The grassy hill in front. Returns (picture, top-left corner)."""
+    cx, cy, rx, ry = HILL
+    c = art.Canvas(1920, 1080, ss=2)
+    c.ellipse(cx, cy, rx, ry, fill=(88, 170, 78))                # dark edge
+    c.ellipse(cx, cy + 12, rx - 5, ry - 5, fill=(126, 208, 104))  # grass
+    rnd = np.random.default_rng(3)
+    for _ in range(26):
+        x = rnd.uniform(80, 1840)
+        y = rnd.uniform(hill_top(x) + 45, 1070)
+        petal = [art.WHITE, (255, 182, 213), (255, 236, 140)][rnd.integers(3)]
+        for k in range(5):
+            a = 2 * math.pi * k / 5
+            c.circle(x + 8 * math.cos(a), y + 8 * math.sin(a), 7, fill=petal)
+        c.circle(x, y, 6, fill=(255, 170, 40))
+    img = c.result()
+    box = img.getbbox()
+    return img.crop(box), box[:2]
 
 
-def lead(kind, note, beats, slide_to=None):
-    seconds = beats * BEAT
-    if kind == "marimba":  # marimba + a quiet bell one octave higher
-        return mixed((sound.marimba(note, max(0.9, seconds + 0.4)), 1.0), (sound.marimba(note + 12, 0.6), 0.3))
-    if kind == "pop":
-        return pop_tone(note, seconds)
-    return whistle(note, seconds * 0.95, slide_to)
+class Still:
+    """A picture that does not move."""
 
+    def __init__(self, sprite, corner, z):
+        self.sprite, self.corner, self.z = sprite, corner, z
 
-def crash(seconds=1.6):
-    n = int(seconds * sound.SR)
-    return np.diff(sound.RNG.uniform(-1, 1, n + 1)) * sound.env(n, 0.002, 0.45)
+    def draw(self, fr, t):
+        fr.paste(self.sprite, self.corner, self.sprite)
 
-
-def clop(pitch=1.0):
-    """One hoof step: a hollow wooden "clop"."""
-    t = sound.t_axis(0.12)
-    x = (np.sin(2 * np.pi * 700 * pitch * t) * np.exp(-t / 0.018)
-         + 0.6 * np.sin(2 * np.pi * 1750 * pitch * t) * np.exp(-t / 0.01)
-         + 0.3 * sound.RNG.uniform(-1, 1, len(t)) * np.exp(-t / 0.005))
-    return 0.8 * x
-
-
-def jingle_music(tune):
-    """Backing (bass, ukulele, drums) + the tune. Loudness (RMS) = 1."""
-    spec = TUNES[tune]
-    out = np.zeros(int((LENGTH + 1) * sound.SR))
-
-    def chord(b):
-        return CHORDS[[name for start, name in spec["chords"] if start <= b][-1]]
-
-    for k in range(12):  # 1/8 notes, beats 0 .. 5.5
-        b = k / 2
-        root, notes = chord(b)
-        if k % 2 == 0:
-            sound.add(out, sound.bass(root if k % 4 == 0 else root + 7), at(b), 0.45)
-            sound.add(out, sound.kick() if k % 4 == 0 else sound.clap(), at(b), 0.45 if k % 4 == 0 else 0.14)
-        for j, n in enumerate(notes):
-            sound.add(out, sound.pluck(n), at(b) + 0.01 * j, 0.06 if k % 2 == 0 else 0.04)
-        sound.add(out, sound.shaker(), at(b), 0.05)
-    root, notes = CHORDS["C"]  # big last chord, then quiet for the shout
-    sound.add(out, sound.bass(root), at(6), 0.55)
-    sound.add(out, sound.kick(), at(6), 0.55)
-    sound.add(out, crash(), at(6), 0.12)
-    for j, n in enumerate(notes + (76, 79)):
-        sound.add(out, sound.pluck(n), at(6) + 0.015 * j, 0.08)
-    for note in spec["notes"]:
-        beat, n, beats = note[:3]
-        sound.add(out, lead(spec["sound"], n, beats, *note[3:]), at(beat), 0.32)
-    for k, n in enumerate((84, 88, 91)):  # little sparkle at the very end
-        sound.add(out, sound.marimba(n, 0.6), at(8) + 0.07 * k, 0.12)
-    out = out[:int(LENGTH * sound.SR)]
-    return out / (np.sqrt(np.mean(out ** 2)) + 1e-9)
-
-
-KIDS = [(5, 1.0, 0.0), (6.5, 0.6, 0.014), (3.5, 0.55, 0.026), (8, 0.45, 0.038), (4.5, 0.5, 0.05)]  # (semitones higher, loudness, delay s)
-
-
-def kid_voice(voice, text, pitch, speed=0.95):
-    """A child-like voice: the AI voice made higher (this also makes it sound like a small child),
-    a little faster, brighter and "shouty"."""
-    x = voice.say(text, slow=speed * 2 ** (pitch / 12), pitch=pitch)
-    level = sound.smooth(np.abs(x), int(0.01 * sound.SR))
-    x = x * np.clip((0.35 / (level + 1e-4)) ** 0.5, 0.5, 4.0)  # compressor: quiet parts louder
-    x = x + 0.5 * (x - sound.smooth(x, 8))  # brighter
-    x = np.tanh(3.0 * x) / np.tanh(3.0)       # louder, like shouting
-    return x / np.max(np.abs(x))
-
-
-def group_shout(voice, text=f"{NAME}!"):
-    """A lead child and four friends shout together (a little after each other, with different voices).
-
-    Returns (group sound, lead voice only) - the lead voice moves Maple's mouth.
-    """
-    parts, lead = [], None
-    for pitch, gain, delay in KIDS:
-        x = kid_voice(voice, text, pitch)
-        lead = x if lead is None else lead
-        parts.append((np.pad(x, (int(delay * sound.SR), 0)), gain))
-    out = mixed(*parts)
-    return 0.92 * out / np.max(np.abs(out)), lead
-
-
-# ---------- moving pictures ----------
 
 def wobble(t, impacts):
     """Jelly squash after landings: returns (x scale, y scale)."""
@@ -174,67 +94,17 @@ def wobble(t, impacts):
     return sx, sy
 
 
-class Maple:
-    """The foal: gallops in, hops on every "zoo", opens its mouth on every note."""
-    z = 3
-
-    def __init__(self, x, y, scale, arrive, notes, shout_at, shout_levels):
-        self.x, self.y, self.scale, self.arrive = x, y, scale, arrive
-        self.sprites = {(e, m): art.foal("zeerd", e, m) for e in ("open", "blink", "happy") for m in range(6)}
-        self.sing = [(at(n[0]), n[2] * BEAT) for n in notes]
-        zoo = [(at(n[0]), n[2]) for k, n in enumerate(notes) if k % 3 == 2]  # every third note is "zoo"
-        self.hops = [(t, 90 if beats > 1 else 50, 0.5 if beats > 1 else 0.36) for t, beats in zoo]
-        self.impacts = [(arrive, 0.08)] + [(t + d, 0.06) for t, _, d in self.hops]
-        self.shout_at, self.shout_levels = shout_at, shout_levels
-
-    def steps(self):
-        """Times when a hoof hits the ground while galloping in."""
-        return [self.arrive * k / 3 for k in (1, 2, 3)]
-
-    def mouth(self, t):
-        k = int((t - self.shout_at) * FPS)
-        if 0 <= k < len(self.shout_levels):
-            return int(self.shout_levels[k])
-        for start, length in self.sing:
-            if start <= t < start + 0.9 * length:
-                p = (t - start) / length
-                return 5 if p < 0.35 else 4 if p < 0.65 else 2
-        return 0
-
-    def draw(self, fr, t):
-        x, y = self.x, self.y
-        if t < self.arrive:  # gallops in from the left with three hops
-            p = t / self.arrive
-            x = -320 + (self.x + 320) * (1 - (1 - p) ** 2)
-            h = abs(math.sin(3 * math.pi * p)) * (1 - 0.3 * p)
-            y -= 90 * h
-            sx, sy = 1 - 0.04 * h, 1 + 0.06 * h
-        else:
-            sx, sy = wobble(t, self.impacts)
-            for start, height, length in self.hops:
-                if 0 <= t - start < length:
-                    y -= height * math.sin(math.pi * (t - start) / length)
-            breath = 0.01 * math.sin(2 * math.pi * 1.2 * t)
-            sx, sy = sx * (1 - breath), sy * (1 + breath)
-        eyes = "happy" if t >= self.shout_at else "blink" if 2.5 <= t < 2.63 else "open"
-        place(fr, self.sprites[(eyes, self.mouth(t))], x, y, self.scale * sx, self.scale * sy,
-              anchor=art.FOAL_FEET)
-
-
 class Logo:
-    """ "Yumizoo" letters: each syllable falls and lands on its note, then bounces on the next ones."""
-    z = 4
+    """ "Yumizoo": the syllables drop in, then each one bounces when the kids sing it."""
+    z = 2
 
-    def __init__(self, notes, x, y, size, jump_at):
+    def __init__(self, x, y, size):
         self.letters = art.title_letters(NAME, size)
-        self.x, self.y, self.jump_at = x, y, jump_at
-        times = [at(n[0]) for n in notes]
-        self.lands = times[:3]                                   # first "Yu", "mi", "zoo"
-        self.bounces = [(t, k % 3) for k, t in enumerate(times) if k >= 3]
+        self.x, self.y = x, y
 
     def draw(self, fr, t):
         for g, (a, b) in enumerate(SYLLABLES):
-            land = self.lands[g]
+            land, sung = LANDS[g], ANSWER[g][0] * BEAT
             if t < land - 0.3:
                 continue
             for i in range(a, b):
@@ -245,40 +115,180 @@ class Logo:
                     y = -150 + (self.y + 150) * p * p
                 else:
                     y = self.y
-                    sx, sy = wobble(t, [(land, 0.25)])
-                    for when, group in self.bounces:
-                        if group == g and 0 <= t - when < 0.3:
-                            y -= 40 * math.sin(math.pi * (t - when) / 0.3)
-                    tj = self.jump_at + 0.04 * i
+                    sx, sy = wobble(t, [(land, 0.25), (sung + 0.25, 0.12)])
+                    if 0 <= t - sung < 0.3:
+                        y -= 45 * math.sin(math.pi * (t - sung) / 0.3)
+                    tj = ZOO + 0.04 * i  # everybody jumps on "ZOO!"
                     if 0 <= t - tj < 0.45:
-                        y -= 70 * math.sin(math.pi * (t - tj) / 0.45)
+                        y -= 60 * math.sin(math.pi * (t - tj) / 0.45)
                 place(fr, spr, self.x + dx, y, sx, sy, anchor=anchor)
 
 
-def build(voice, tune, shout, label=None):
-    """One intro with one tune. `shout` comes from group_shout() (made once, used for every tune)."""
-    group, main = shout
-    notes = TUNES[tune]["notes"]
+class Peeker(rig.Character):
+    """The puppy or the kitten behind the hill.
+
+    ears_at: when the ears pop up. up_at: when it jumps up ("BOO!"). flip: a flip in that jump.
+    """
+
+    def __init__(self, kind, colors, seed, ears_at, up_at=BOO, flip=False):
+        x = SPOTS[kind]
+        super().__init__(kind, colors, 0, seed=seed, home=(x, hill_top(x) + 8), size=SIZE)
+        self.ears_at, self.up_at, self.flip = ears_at, up_at, flip
+        top = self.ground - 8
+        # Where the feet are (screen y) for: hidden, only the ears, peeking eyes, standing on the hill.
+        self.stage = {"hidden": top + 650, "ears": top + (588 - EARS[kind]) * SIZE,
+                      "peek": top + (588 - 290) * SIZE, "up": self.ground}
+        self.land = up_at + 0.45
+
+    def feet(self, t):
+        s = self.stage
+        if t < self.ears_at:
+            return s["hidden"]
+        if t < PEEK:  # the ears pop up (a little too far, then back)
+            return s["hidden"] + (s["ears"] - s["hidden"]) * ease_out_back(clamp((t - self.ears_at) / 0.25), 2.0)
+        if t < self.up_at:  # the eyes peek over the hill, then duck a little before "BOO!"
+            y = s["ears"] + (s["peek"] - s["ears"]) * ease_out_quad(clamp((t - PEEK) / 0.15))
+            return y + 24 * math.sin(math.pi * clamp((t - (self.up_at - 0.25)) / 0.25))
+        u = t - self.up_at
+        apex = s["up"] - 170
+        if u < 0.22:  # jump up...
+            return s["peek"] + (apex - s["peek"]) * ease_out_quad(u / 0.22)
+        if u < 0.45:  # ...and land on the hill
+            return apex + (s["up"] - apex) * ((u - 0.22) / 0.23) ** 2
+        y = s["up"]
+        for when, height, length in ((ANSWER[0][0] * BEAT, 24, 0.2), (ANSWER[1][0] * BEAT, 24, 0.2),
+                                     (ZOO, 90, 0.45)):
+            if when >= self.land and 0 <= t - when < length:  # hops on "Yu", "mi" and a jump on "ZOO!"
+                y -= height * math.sin(math.pi * (t - when) / length)
+        return y
+
+    def pose(self, t):
+        p = super().pose(t)  # breathing, blinking, the mouth (singing) and rig movements (like "wave")
+        p.y += (self.feet(t) - self.ground) / self.size  # rig movements are in full-size pixels
+        u = t - self.up_at
+        if self.ears_at <= t < PEEK:  # wiggly ears
+            w = math.sin(2 * math.pi * 4 * t)
+            p.ear_l, p.ear_r = p.ear_l + 16 * w, p.ear_r - 16 * w
+            p.head_rot += 4 * w
+        if 0 <= u < 0.5:  # "BOO!": arms up, big eyes, then happy
+            p.arm_l = p.arm_r = 0.0
+            p.eyes = "wide" if u < 0.15 else "happy"
+            q = math.sin(math.pi * clamp(u / 0.45))
+            p.sy *= 1 + 0.06 * q
+            p.sx *= 1 - 0.04 * q
+            if self.flip:
+                p.pivot = rig.ROLL_PIVOT
+                p.rot += (360 if self.side == "right" else -360) * rig.smooth(u / 0.45)
+        if 0 <= t - self.land < 0.2:  # squash when landing
+            q = math.sin(math.pi * (t - self.land) / 0.2)
+            p.sy *= 1 - 0.12 * q
+            p.sx *= 1 + 0.1 * q
+        if 0 <= t - ZOO < 0.6 and ZOO >= self.land:  # "ZOO!": arms up again
+            p.arm_l = p.arm_r = 0.0
+            p.eyes = "happy"
+        return p
+
+
+def jingle():
+    """The music under the singing: bass, plucked chords, drums and bells. Loudness (RMS) = 1."""
+    out = np.zeros(int((LENGTH + 1) * sound.SR))
+
+    def add(sig, beat, gain):
+        sound.add(out, sig, beat * BEAT, gain)
+
+    add(sound.pluck(48, 0.4), 1.2, 0.3)  # tiptoe while the ears peek
+    add(sound.pluck(55, 0.4), 1.6, 0.3)
+    add(sound.bass(36), 2, 0.4)
+    for k in range(4):
+        add(sound.shaker(), 2 + k / 2, 0.06)
+    chords = {3: (36, (60, 64, 67, 72)), 4: (41, (60, 65, 69, 72)), 5: (36, (60, 64, 67, 72, 76))}
+    for beat, (root, notes) in chords.items():
+        add(sound.bass(root, 0.9), beat, 0.55)
+        add(sound.kick(), beat, 0.5)
+        for j, n in enumerate(notes):
+            add(sound.pluck(n, 1.4), beat + 0.02 * j, 0.09)
+    add(sound.clap(), 3.5, 0.18)
+    add(sound.clap(), 4.5, 0.18)
+    add(sound.bass(36, 0.9), 4.5, 0.35)
+    for beat, _, note, beats in CALL + ANSWER:  # bells play the tune with the singers
+        add(sound.marimba(note + 12, 0.35 + beats * BEAT), beat, 0.16)
+    for k in range(4):
+        add(sound.shaker(), 5 + k / 2, 0.05)
+    out = out[:int(LENGTH * sound.SR)]
+    return out / (np.sqrt(np.mean(out ** 2)) + 1e-9)
+
+
+def voices(voice):
+    """The singing. Returns (all voices mixed, the puppy's part, the kitten's part)."""
+    call = [(b * BEAT, s, n, d * BEAT) for b, s, n, d in CALL]
+    answer = [(b * BEAT, s, n, d * BEAT) for b, s, n, d in ANSWER]
+    puppy = sing.sing(voice, call, LENGTH, formant=2 ** (3 / 12)) \
+        + 0.6 * sing.sing(voice, answer, LENGTH, formant=2 ** (3 / 12))
+    kitten = sing.sing(voice, call, LENGTH, formant=2 ** (6 / 12), detune=8, late=0.012) \
+        + 0.6 * sing.sing(voice, answer, LENGTH, formant=2 ** (6 / 12), detune=8, late=0.012)
+    kids = sum(gain * sing.sing(voice, answer, LENGTH, formant=f, detune=c, late=late) for f, c, late, gain in KIDS)
+    kids = kids / np.max(np.abs(kids))
+    mix = puppy + 0.85 * kitten + 1.1 * kids
+    level = sound.smooth(np.abs(mix), int(0.01 * sound.SR))
+    mix = mix * np.clip((0.3 / (level + 1e-4)) ** 0.4, 0.6, 2.0)  # a gentle compressor: even and clear
+    return 0.9 * mix / np.max(np.abs(mix)), puppy, kitten
+
+
+def whistle_drop(seconds=0.28):
+    """A little falling whistle (the logo letters drop in)."""
+    t = sound.t_axis(seconds)
+    f = 1400 - 700 * (t / seconds) ** 1.5
+    return np.sin(2 * np.pi * np.cumsum(f) / sound.SR) * np.minimum(1, t / 0.02) * np.minimum(1, (seconds - t) / 0.05)
+
+
+def bloop(factor):
+    """A bubbly "bloop" (the ears popping up)."""
+    t = sound.t_axis(0.16)
+    f = factor * (260 + 700 * np.minimum(t / 0.09, 1))
+    return np.sin(2 * np.pi * np.cumsum(f) / sound.SR) * sound.env(len(t), 0.003, 0.045)
+
+
+def build(voice, gag="boo", label=None, sung=None):
+    """One intro. `sung` comes from voices(voice) (made once, used for every gag)."""
+    group, puppy_part, kitten_part = sung or voices(voice)
     show = Show(voice, mascot=False)
-    show.music = jingle_music(tune)
-    show.music_level, show.duck = 0.08, 0.2  # music below the voice, and very quiet for the shout
-    shout_at = at(SHOUT_BEAT)
-    show.voices.append((shout_at, group))
-    maple = show.add(Maple(960, 1010, 0.9, START - 0.1, notes, shout_at, sound.mouth_levels(main, FPS)))
-    for k, step in enumerate(maple.steps()):
-        show.sfx(step - 0.035, clop(1.0), 0.4)
-        show.sfx(step + 0.035, clop(1.3 if k % 2 else 1.18), 0.35)
-    show.add(Logo(notes, 960, 330, 210, shout_at))
-    zoo_end = at(notes[-1][0])
-    for (thing, bottom, scale), x, beat in (((art.jelly(PINK), art.JELLY_BOTTOM, 0.62), 440, notes[3][0]),
-                                            ((art.cupcake(), (250, 470), 0.72), 1480, notes[5][0])):
-        show.add(Actor(thing, bottom, at(beat), LENGTH + 1, x, 1000, scale=scale, jumps=[zoo_end, shout_at]))
-        show.sfx(at(beat), sound.sfx_pop(), 0.35)
-    for k, n in enumerate((84, 88, 91)):  # short sparkle (a long bell would ring under the shout)
-        show.sfx(zoo_end + 0.06 * k, sound.marimba(n, 0.5), 0.2)
-    show.cheer(shout_at, (960, 330), n=110)
+    show.music = jingle()
+    show.music_level, show.duck = 0.09, 1.0
+    show.fade = 0.3
+    show.voices.append((0.0, group))
+    late = gag == "late"
+    puppy = Peeker("puppy", "golden", 1, ears_at=0.62, flip=gag == "flip")
+    kitten = Peeker("kitten", "tuxedo", 2, ears_at=0.8, up_at=ANSWER[1][0] * BEAT if late else BOO,
+                    flip=gag == "flip")
+    for ch, part in ((puppy, puppy_part), (kitten, kitten_part)):
+        ch.talking.append((0.0, sound.mouth_levels(part, 30)))
+        ch.act("wave", ZOO + 0.55, seconds=LENGTH)
+        show.add(ch)
+    if late:
+        puppy.act("head_tilt", puppy.land + 0.05, seconds=0.7)  # "Where is the kitten?"
+        kitten.act("surprised", kitten.up_at, seconds=1.0)
+    show.add(Logo(*LOGO))
+    sprite, corner = hill()
+    show.add(Still(sprite, corner, z=4))
+    show.sfx(0.02, whistle_drop(), 0.1)
+    for land, note in zip(LANDS, (84, 88, 91)):
+        show.sfx(land, sound.marimba(note, 0.5), 0.3)
+    show.sfx(puppy.ears_at, bloop(1.0), 0.35)
+    show.sfx(kitten.ears_at, bloop(1.35), 0.35)
+    for ch in (puppy, kitten):
+        show.sfx(ch.up_at, sound.sfx_pop(), 0.35)
+        show.sfx(ch.land, sound.sfx_thump(), 0.3)
+    show.sfx(BOO - 0.35, sound.sfx_whoosh(0.4), 0.1)
+    for k, n in enumerate((84, 88, 91, 96)):  # sparkle on "ZOO!"
+        show.sfx(ZOO + 0.06 * k, sound.marimba(n, 0.5), 0.14)
+    for when, note, gain in ((7 * BEAT, 67, 0.2), (7.25 * BEAT, 72, 0.24)):  # "ta-da" at the end
+        show.sfx(when, sound.pluck(note, 1.0), gain)
+    show.sfx(7.25 * BEAT, sound.kick(), 0.3)
+    show.sfx(7.25 * BEAT, sound.bass(36, 1.0), 0.35)
+    show.cheer(ZOO, (LOGO[0], LOGO[1] - 90), n=90)
     if label:
-        show.add(Actor(art.badge(label), None, 0.1, LENGTH + 1, 110, 110, scale=0.55, z=9))
-    show.snap(at(8) + 0.3, tune)
+        show.add(Actor(art.badge(label), None, 0.1, LENGTH + 1, 110, 110, scale=0.5, z=9))
+    show.snap(BOO + 0.2, f"{gag}: boo")
+    show.snap(ZOO + 0.3, f"{gag}: zoo")
     show.t = LENGTH
     return show

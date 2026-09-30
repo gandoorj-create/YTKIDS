@@ -76,11 +76,40 @@ python3 make_scene.py --moves                       # all movements
 
 To add a new movement, write a function in `kidsvid/rig.py` that changes the pose, and add it to `MOVES`.
 
-## Channel intro
+## Channel intro: "Peek-a-boo! Yu-mi-zoo!"
 
-`python3 make_intro.py` makes 3 versions of the 6-second intro (tunes: chant, rising, wobbly) and
-`intro_all.mp4` with all 3 in a row. The logo letters land on the notes, and at the end kids shout "Yumizoo!".
-It still shows the foal Maple with Wobbaloo and Cupcake; it will change to the puppy and the kitten.
+`python3 make_intro.py` makes the 4.6-second intro in 3 versions, and `intro_all.mp4` (all 3 in a row, numbered).
+The tune is always the same. Only a small surprise changes, so each episode can use a different one:
+
+| File | Surprise |
+| --- | --- |
+| `intro_boo.mp4` | both jump up together |
+| `intro_late.mp4` | the kitten comes up late and gets a surprise |
+| `intro_flip.mp4` | both do a flip in the air |
+
+What happens: the logo drops in. The ears of the puppy and the kitten peek over a hill. They sing "Peek-a..."
+with only their eyes showing, jump up on "BOO!", and kids answer "Yu-mi-ZOO!" (confetti, then they wave).
+The singing is on real notes (E G C, A G C): the AI voice says each syllable, and WORLD (`pyworld`) puts it on
+the note (`kidsvid/sing.py`).
+
+Why it is made like this (research, September 2026):
+
+- A branded intro works best at about 3-5 seconds; the first seconds decide if viewers stay
+  ([teleprompter.com](https://www.teleprompter.com/blog/how-long-should-a-youtube-intro-be)).
+- Sound logos are remembered better with a melody (about +20%) and with the brand name in them (about +15%).
+  They usually have 3-6 notes, and 6 notes tested best
+  ([mumbrella](https://mumbrella.com.au/melody-the-key-to-successful-audio-branding-729336),
+  [University of Cambridge](https://www.repository.cam.ac.uk/items/903c50f3-6d66-4721-af94-7c037073b139)).
+  Ours has 6 notes and sings the name.
+- Kids learn a channel's first sound: children run to the screen at the first note of Cocomelon's intro
+  (a child shouts the name there too).
+- Peekaboo is funny because of surprise at an expected moment
+  ([UCL](https://www.ucl.ac.uk/institute-of-advanced-studies/publications/2021/jan/ias-laughter-why-peekaboo-ultimate-baby-comedy)).
+- Young children join in more when a video leaves them a part (call and answer, waiting for them)
+  ([Disney Research](https://la.disneyresearch.com/publication/investigating-the-effects-of-interactive-features-for-preschool-television-programming/)).
+- Parents are moving away from overstimulating videos, and the channels that grow are character-led
+  ([Whizzy Studios](https://www.whizzystudios.com/post/kids-animation-trends-2026-whats-growing-on-youtube)):
+  one clear action at a time, and a small new surprise that makes kids want to see what the characters do.
 
 ## 3D foal
 
@@ -97,10 +126,11 @@ python3 foal3d.py --preview
 | `make_episode1.py` | Episode 1: which parts, colors and things |
 | `make_scene.py` | A video from a scene file (the movements you choose) |
 | `scenes/` | Scene files: `example.txt`, `catalog.txt` (every movement) |
-| `make_intro.py` | The channel intro (3 tunes to choose from) |
+| `make_intro.py` | The channel intro, "Peek-a-boo! Yu-mi-zoo!" (3 surprises) |
 | `foal3d.py` | The foal in 3D (Blender) |
 | `kidsvid/lessons.py` | Building blocks: intro, color lesson, quiz round, guessing game, final challenge, goodbye |
-| `kidsvid/intro.py` | The intro: tunes, the singing jelly, the logo |
+| `kidsvid/intro.py` | The intro: the tune, the hill, the peeking puppy and kitten, the logo |
+| `kidsvid/sing.py` | Singing: puts the AI voice on musical notes (WORLD vocoder) |
 | `kidsvid/show.py` | The engine: timeline, talking characters, confetti, making the video file |
 | `kidsvid/rig.py` | The moving puppy and kitten: their parts, and every movement (`MOVES`) |
 | `kidsvid/art.py` | Drawings: puppy and kitten (in parts), foal, lamb, jelly, cupcake, marshmallow, 14 things, background, text |
