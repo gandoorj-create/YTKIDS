@@ -203,8 +203,11 @@ class Show:
     def snap(self, at, name):
         self.snaps.append((at, name))
 
-    def chapters_text(self):
-        return "\n".join(f"{int(t // 60)}:{int(t % 60):02d} {name}" for t, name in self.chapters)
+    def chapters_text(self, offset=0.0):
+        """Chapters for YouTube. offset: seconds of video before this show (like the channel intro).
+        The first chapter always starts at 0:00."""
+        times = [0.0] + [t + offset for t, _ in self.chapters[1:]]
+        return "\n".join(f"{int(t // 60)}:{int(t % 60):02d} {name}" for t, (_, name) in zip(times, self.chapters))
 
     # ----- drawing -----
 

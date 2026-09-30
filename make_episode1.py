@@ -3,19 +3,24 @@
 
     python3 make_episode1.py              # full video -> output/episode1_learn_colors.mp4 (about 20 minutes)
     python3 make_episode1.py --preview    # only still pictures (fast)
+    python3 make_episode1.py --no-intro   # without the channel intro at the start
 
 Also makes: episode1_thumbnail.jpg, episode1_preview.jpg and episode1_youtube.txt (title, description, chapters).
 """
 import argparse
+import subprocess
 from pathlib import Path
 
-from kidsvid import art, lessons, rig, sound
+import imageio_ffmpeg
+
+from kidsvid import art, intro, lessons, rig, sound
 from kidsvid.anim import place
 from kidsvid.show import Show, contact_sheet
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "output"
 VOICE = ROOT / "assets" / "voices" / "jenny"
+INTRO = "late"  # the channel intro at the start: the kitten comes up late (see make_intro.py)
 
 HOOK = [("balloon", "red"), ("star", "yellow"), ("fish", "blue"), ("frog", "green"),
         ("grapes", "purple"), ("orange", "orange")]
@@ -87,18 +92,38 @@ def thumbnail(path):
     img.resize((1280, 720), resample=3).save(path, quality=92)
 
 
+def join(parts, out):
+    """Videos one after another in one file (no new encoding: they are all made the same way)."""
+    listing = out.with_suffix(".txt")
+    listing.write_text("".join(f"file '{p.resolve()}'\n" for p in parts))
+    subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
+                    "-i", str(listing), "-c", "copy", "-movflags", "+faststart", str(out)], check=True)
+    listing.unlink()
+
+
 def main():
     ap = argparse.ArgumentParser(description="Make episode 1: Learn Colors for Kids.")
     ap.add_argument("--preview", action="store_true", help="only still pictures (fast)")
+    ap.add_argument("--no-intro", action="store_true", help="without the channel intro at the start")
     ap.add_argument("--out", default=str(OUT / "episode1_learn_colors.mp4"))
     args = ap.parse_args()
     OUT.mkdir(exist_ok=True)
 
-    show = build(sound.Voice(VOICE / "voice.onnx", VOICE / "voice.json"))
-    print(f"Length: {show.t / 60:.1f} min\n{show.chapters_text()}")
-    stills = show.preview() if args.preview else show.render(Path(args.out))
+    voice = sound.Voice(VOICE / "voice.onnx", VOICE / "voice.json")
+    show = build(voice)
+    offset = 0.0 if args.no_intro else intro.LENGTH
+    print(f"Length: {(show.t + offset) / 60:.1f} min\n{show.chapters_text(offset)}")
+    if args.preview:
+        stills = show.preview()
+    elif args.no_intro:
+        stills = show.render(Path(args.out))
+    else:
+        body, opening = OUT / "episode1_no_intro.mp4", OUT / f"intro_{INTRO}.mp4"
+        stills = show.render(body)
+        intro.build(voice, INTRO).render(opening)
+        join([opening, body], Path(args.out))
     contact_sheet(list(stills.values()), OUT / "episode1_preview.jpg")
-    (OUT / "episode1_youtube.txt").write_text(YOUTUBE.format(chapters=show.chapters_text()))
+    (OUT / "episode1_youtube.txt").write_text(YOUTUBE.format(chapters=show.chapters_text(offset)))
     thumbnail(OUT / "episode1_thumbnail.jpg")
     print("Done.")
 

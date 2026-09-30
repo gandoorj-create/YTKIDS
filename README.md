@@ -16,16 +16,16 @@ No camera and no drawing app are needed.
 
 | Time | Part |
 | --- | --- |
-| 0:00 | Intro: things pop up at once (hook), "Let's Learn Colors!", the puppy and the kitten walk in and say hello |
-| 0:11 | Red: meet the color, 3 red things, "Find the red one!", "Which one is not red?", 2 quiz rounds |
-| 0:55 | Blue (same parts) |
-| 1:38 | Yellow |
-| 2:22 | Green |
-| 3:06 | Guessing game: 10 questions, all colors mixed |
-| 4:28 | Final challenge: kids say every color, then 2 new colors for next time (orange, purple) |
-| 4:55 | Goodbye |
+| 0:00 | Channel intro "Peek-a-boo! Yu-mi-zoo!" (4.6 s), then things pop up at once (hook), "Let's Learn Colors!", Maple and Domi walk in and say hello |
+| 0:15 | Red: meet the color, 3 red things, "Find the red one!", "Which one is not red?", 2 quiz rounds |
+| 0:59 | Blue (same parts) |
+| 1:42 | Yellow |
+| 2:25 | Green |
+| 3:09 | Guessing game: 10 questions, all colors mixed |
+| 4:31 | Final challenge: kids say every color, then 2 new colors for next time (orange, purple) |
+| 4:57 | Goodbye |
 
-The puppy (bottom left) and the kitten (bottom right) take turns saying the lines. They jump for joy at every
+Maple the puppy (bottom left) and Domi the kitten (bottom right) take turns saying the lines. They jump for joy at every
 right answer, tilt their heads while kids think, dance after the final challenge and wave goodbye.
 
 Kids get time to answer: the countdown is 3 seconds, and after "Can you say red?" there is a pause.
@@ -38,10 +38,12 @@ pip install -r requirements.txt
 python3 get_assets.py                # downloads the voice and the font
 python3 make_episode1.py             # makes output/episode1_learn_colors.mp4 (about 20 minutes)
 python3 make_episode1.py --preview   # only still pictures (fast)
+python3 make_episode1.py --no-intro  # without the channel intro at the start
 ```
 
 `make_episode1.py` also makes `episode1_thumbnail.jpg` (the YouTube picture) and `episode1_youtube.txt`
-(title, description, chapters).
+(title, description, chapters; the chapter times include the intro). `episode1_no_intro.mp4` is the same episode
+without the intro.
 
 To make a new episode, copy `make_episode1.py` and change the lists at the top (colors, things, questions).
 To add a new thing (for example a car), add a drawing function to `kidsvid/art.py` and put it in `THINGS`.
