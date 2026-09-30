@@ -34,6 +34,16 @@ end screens and no notification bell on YouTube. It asks a grown-up, not the chi
 Kids get time to answer: the countdown is 3 seconds, and after "Can you say red?" there is a pause.
 The times move a little each time we make the video, because the AI voice is a little different each time.
 
+## Make it on your own computer (Windows)
+
+1. Install Python 3.10, 3.11 or 3.12 from python.org (tick "Add Python to PATH").
+2. On GitHub: the green **Code** button, then **Download ZIP**. Unzip it.
+3. Double-click `setup_windows.bat`. It installs the libraries, downloads the voice and the font (only the
+   first time), and makes Episode 1. The video is in the `output` folder at the end.
+
+Making a video on your own computer does not use any Claude tokens. On a Mac, run the three commands below
+in the Terminal instead.
+
 ## How to use
 
 ```bash

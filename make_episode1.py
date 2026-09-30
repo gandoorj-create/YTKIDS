@@ -96,7 +96,7 @@ def thumbnail(path):
 def join(parts, out):
     """Videos one after another in one file (no new encoding: they are all made the same way)."""
     listing = out.with_suffix(".txt")
-    listing.write_text("".join(f"file '{p.resolve()}'\n" for p in parts))
+    listing.write_text("".join(f"file '{p.resolve().as_posix()}'\n" for p in parts))  # "/" works on Windows too
     subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
                     "-i", str(listing), "-c", "copy", "-movflags", "+faststart", str(out)], check=True)
     listing.unlink()
