@@ -786,3 +786,134 @@ def foal(colors="zeerd", eyes_mode="open", mouth=0):
     else:
         open_mouth(c, 270, 346 + 2.2 * mouth, 9 + 2.2 * mouth, 3 + 3.2 * mouth)
     return c.result()
+
+
+# ---------- Maple's friends: a chubby puppy and a chubby kitten ----------
+
+PET_SIZE, PET_FEET = (560, 600), (280, 582)
+PUPPY_COLORS = {  # body, ears and eye spot, muzzle and belly
+    "cream": ((252, 238, 214), (214, 150, 90), (255, 250, 242)),
+    "golden": ((242, 196, 120), (196, 136, 66), (255, 238, 206)),
+    "spotty": ((250, 250, 252), (74, 70, 84), (255, 255, 255)),
+}
+KITTEN_COLORS = {  # body, stripes, muzzle and belly
+    "grey": ((178, 188, 212), (126, 136, 166), (255, 255, 255)),
+    "orange": ((250, 172, 92), (222, 122, 52), (255, 240, 220)),
+    "tuxedo": ((78, 76, 92), (58, 56, 70), (255, 255, 255)),
+}
+NOSE_PINK = (255, 140, 165)
+
+
+def is_dark(color):
+    return sum(color[:3]) / 3 < 110
+
+
+def bezier(p0, p1, p2, p3, n=24):
+    """Smooth curve through p0 and p3, pulled toward p1 and p2."""
+    pts = []
+    for i in range(n + 1):
+        t = i / n
+        w = ((1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3)
+        pts.append((sum(k * p[0] for k, p in zip(w, (p0, p1, p2, p3))),
+                    sum(k * p[1] for k, p in zip(w, (p0, p1, p2, p3)))))
+    return pts
+
+
+def paws(c, cx, y, color, line, spread, size):
+    for x in (cx - spread, cx + spread):
+        c.ellipse(x, y, size, size * 0.62, fill=color, outline=line, width=4)
+        for dx in (-size * 0.35, 0, size * 0.35):
+            c.line([(x + dx, y + size * 0.18), (x + dx, y + size * 0.5)], line, 3)
+
+
+def pet_eyes(c, cx, cy, gap, body, eyes_mode):
+    if is_dark(body) and eyes_mode == "open":  # light rings, so dark eyes show on dark fur
+        for x in (cx - gap, cx + gap):
+            c.ellipse(x, cy, 28, 34, fill=(236, 236, 246))
+    eyes(c, cx, cy, gap, 22, 28, eyes_mode)
+
+
+def pet_mouth(c, cx, y, mouth):
+    """ "w" shaped cat/dog mouth, or open when talking."""
+    if mouth == 0:
+        c.line([(cx, y - 12), (cx, y)], MOUTH, 4)
+        for side in (-1, 1):
+            c.arc(cx + side * 13, y - 6, 13, 12, 20, 160, MOUTH, 5)
+    else:
+        open_mouth(c, cx, y + 6 + 2 * mouth, 9 + 2.2 * mouth, 4 + 3.2 * mouth)
+
+
+def puppy(colors="cream", eyes_mode="open", mouth=0):
+    """A chubby puppy with floppy ears and a spot around one eye."""
+    body, patch, light = PUPPY_COLORS[colors] if isinstance(colors, str) else colors
+    line, patch_line = shade(body, 0.72), shade(patch, 0.7)
+    cx = 280
+    c = Canvas(*PET_SIZE)
+    outlined(c, ellipse_pts(cx + 190, 382, 26, 54, 40), patch, patch_line, 4)  # wagging tail
+    for side in (-1, 1):
+        c.ellipse(cx + side * 125, 552, 46, 28, fill=shade(body, 0.9), outline=line, width=4)
+    trunk = c.layer()
+    blob(trunk, [(cx, 432, 165, 122)], body, line, 5)
+    c.paste(trunk)
+    belly = c.layer()
+    belly.ellipse(cx, 462, 100, 84, fill=light)
+    c.paste(belly, mask=trunk)
+    paws(c, cx, 554, body, line, 58, 46)
+    head = c.layer()
+    blob(head, [(cx, 235, 168, 146), (cx - 108, 292, 74, 62), (cx + 108, 292, 74, 62)], body, line, 5)
+    c.paste(head)
+    spot = c.layer()
+    spot.ellipse(cx + 66, 226, 60, 54, fill=patch)
+    c.paste(spot, mask=head)
+    for side in (-1, 1):  # floppy ears
+        outlined(c, ellipse_pts(cx + side * 162, 228, 52, 98, side * -18), patch, patch_line, 5)
+    c.ellipse(cx, 318, 80, 52, fill=light, outline=shade(light, 0.85), width=3)
+    pet_eyes(c, cx, 230, 66, body, eyes_mode)
+    blush(c, [(cx - 120, 300, 26, 15), (cx + 120, 300, 26, 15)], blush_color(body))
+    c.ellipse(cx, 290, 27, 19, fill=(62, 48, 56))
+    c.circle(cx - 8, 284, 6, fill=WHITE)
+    pet_mouth(c, cx, 324, mouth)
+    return c.result()
+
+
+def kitten(colors="grey", eyes_mode="open", mouth=0):
+    """A chubby kitten with a curly tail, stripes on its forehead and whiskers."""
+    body, stripe, light = KITTEN_COLORS[colors] if isinstance(colors, str) else colors
+    line = shade(body, 0.72)
+    cx = 280
+    c = Canvas(*PET_SIZE)
+    tail = bezier((cx + 120, 480), (cx + 245, 470), (cx + 250, 320), (cx + 185, 298))
+    c.line(tail, line, 44)
+    c.line(tail, body, 34)
+    for side in (-1, 1):
+        c.ellipse(cx + side * 122, 552, 44, 26, fill=shade(body, 0.9), outline=line, width=4)
+    trunk = c.layer()
+    blob(trunk, [(cx, 434, 160, 118)], body, line, 5)
+    c.paste(trunk)
+    belly = c.layer()
+    belly.ellipse(cx, 462, 92, 80, fill=light)
+    c.paste(belly, mask=trunk)
+    paws(c, cx, 554, light, shade(light, 0.78), 58, 44)
+    for side in (-1, 1):  # pointy ears
+        outlined(c, [(cx + side * 150, 175), (cx + side * 128, 48), (cx + side * 48, 118)], body, line, 5, rounding=26)
+        c.polygon([(cx + side * 136, 158), (cx + side * 126, 82), (cx + side * 74, 124)], (255, 185, 200))
+    head = c.layer()
+    for side in (-1, 1):  # fluffy cheeks
+        outlined(head, [(cx + side * 165, 266), (cx + side * 198, 290), (cx + side * 165, 312)], body, line, 4, rounding=10)
+    blob(head, [(cx, 245, 182, 142)], body, line, 5)
+    c.paste(head)
+    stripes = c.layer()
+    for dx, h in ((-34, 44), (0, 58), (34, 44)):
+        stripes.line([(cx + dx, 100), (cx + dx * 0.8, 108 + h)], stripe, 12)
+    c.paste(stripes, mask=head)
+    for side in (-1, 1):
+        c.circle(cx + side * 24, 314, 32, fill=light)
+    whisker = (220, 220, 232) if is_dark(body) else shade(body, 0.5)
+    for side in (-1, 1):
+        for dy in (-12, 2, 16):
+            c.line([(cx + side * 60, 312 + dy * 0.5), (cx + side * 132, 300 + dy * 1.5)], whisker, 3)
+    pet_eyes(c, cx, 238, 70, body, eyes_mode)
+    blush(c, [(cx - 124, 294, 26, 15), (cx + 124, 294, 26, 15)], blush_color(body))
+    outlined(c, [(cx - 14, 290), (cx + 14, 290), (cx, 305)], NOSE_PINK, shade(NOSE_PINK, 0.85), 2, rounding=8)
+    pet_mouth(c, cx, 326, mouth)
+    return c.result()
