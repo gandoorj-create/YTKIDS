@@ -138,7 +138,10 @@ as a circle) and the banner `channel_banner.png` (2560x1440). On the banner, the
 Domi are in the middle part (1546x423) that phones show; computers show the full-width band, TVs everything.
 `channel_banner_check.jpg` marks these parts. The finished pictures are also in `designs/`.
 
-Upload: YouTube Studio → Customization → Branding → Picture / Banner image.
+It also makes `channel_watermark.png` (a paw in a rainbow ring). Note: YouTube does not show the branding
+watermark on "made for kids" videos.
+
+Upload: YouTube Studio → Customization → Branding → Picture / Banner image / Video watermark.
 
 ## 3D foal
 

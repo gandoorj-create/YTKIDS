@@ -3,8 +3,8 @@
 
     python3 make_channel_art.py
 
-Makes output/channel_avatar.png, output/channel_banner.png and output/channel_banner_check.jpg
-(the banner with the parts that phones, computers and TVs show).
+Makes output/channel_avatar.png, output/channel_banner.png, output/channel_banner_check.jpg
+(the banner with the parts that phones, computers and TVs show) and output/channel_watermark.png.
 """
 import math
 import random
@@ -81,6 +81,32 @@ def banner(path):
     return img
 
 
+def watermark(path, size=600):
+    """A round badge with a paw (YouTube: square, at least 150x150, under 1 MB). Transparent around it."""
+    c = art.Canvas(size, size)
+    m, r = size / 2, size * 0.46
+    ring = size * 0.06
+    for k, color in enumerate(art.RAINBOW):  # a rainbow ring, like the Yumizoo letters
+        angles = [math.radians(-90 + (k + i / 16) * 360 / 7) for i in range(17)]
+        outer = [(m + (r + ring / 2) * math.cos(a), m + (r + ring / 2) * math.sin(a)) for a in angles]
+        inner = [(m + (r - ring / 2) * math.cos(a), m + (r - ring / 2) * math.sin(a)) for a in reversed(angles)]
+        c.polygon(outer + inner, color)
+    c.circle(m, m, r - ring / 2, fill=art.WHITE)
+    fur, line, bean = (255, 236, 208), (176, 132, 100), (255, 162, 186)
+    cy = m + size * 0.07
+    toes = [(-0.19, -0.17), (-0.07, -0.265), (0.07, -0.265), (0.19, -0.17)]
+    for grow, color in ((size * 0.012, line), (0, fur)):
+        c.ellipse(m, cy, size * 0.2 + grow, size * 0.165 + grow, fill=color)
+        for dx, dy in toes:
+            c.circle(m + dx * size, cy + dy * size, size * 0.07 + grow, fill=color)
+    c.ellipse(m, cy + size * 0.02, size * 0.12, size * 0.09, fill=bean)
+    for dx, dy in toes:
+        c.circle(m + dx * size, cy + dy * size, size * 0.038, fill=bean)
+    img = c.result()
+    img.save(path)
+    return img
+
+
 def check(img, path):
     """The banner, with boxes: phone (the safe middle) and computer (the full-width band)."""
     w, h = BANNER
@@ -99,7 +125,8 @@ def main():
     OUT.mkdir(exist_ok=True)
     avatar(OUT / "channel_avatar.png")
     check(banner(OUT / "channel_banner.png"), OUT / "channel_banner_check.jpg")
-    print("made channel_avatar.png, channel_banner.png, channel_banner_check.jpg")
+    watermark(OUT / "channel_watermark.png")
+    print("made channel_avatar.png, channel_banner.png, channel_banner_check.jpg, channel_watermark.png")
 
 
 if __name__ == "__main__":
