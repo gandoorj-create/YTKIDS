@@ -5,6 +5,7 @@ piper-tts
 zstandard
 fonttools
 brotli
-pyworld
+# The singing in the intro (kidsvid/sing.py, make_intro.py) also needs: pip install pyworld
+# (on Windows that needs a C++ compiler, so make_episode1.py uses the ready-made intro in assets/intro)
 # 3D (foal3d.py) also needs Blender as a Python module (about 370 MB):
 # bpy

@@ -8,6 +8,7 @@
 Also makes: episode1_thumbnail.jpg, episode1_preview.jpg and episode1_youtube.txt (title, description, chapters).
 """
 import argparse
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -21,6 +22,7 @@ ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "output"
 VOICE = ROOT / "assets" / "voices" / "jenny"
 INTRO = "late"  # the channel intro at the start: the kitten comes up late (see make_intro.py)
+READY_INTRO = ROOT / "assets" / "intro"  # ready-made intros, for computers without pyworld (like Windows)
 
 HOOK = [("balloon", "red"), ("star", "yellow"), ("fish", "blue"), ("frog", "green"),
         ("grapes", "purple"), ("orange", "orange")]
@@ -102,6 +104,17 @@ def join(parts, out):
     listing.unlink()
 
 
+def make_intro(voice, path):
+    """The channel intro. The singing needs pyworld; without it, the ready-made intro is used."""
+    try:
+        import pyworld  # noqa: F401
+    except ImportError:
+        print("(pyworld is not installed, so the ready-made intro is used)")
+        shutil.copy(READY_INTRO / path.name, path)
+        return
+    intro.build(voice, INTRO).render(path)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Make episode 1: Learn Colors for Kids.")
     ap.add_argument("--preview", action="store_true", help="only still pictures (fast)")
@@ -121,7 +134,7 @@ def main():
     else:
         body, opening = OUT / "episode1_no_intro.mp4", OUT / f"intro_{INTRO}.mp4"
         stills = show.render(body)
-        intro.build(voice, INTRO).render(opening)
+        make_intro(voice, opening)
         join([opening, body], Path(args.out))
     contact_sheet(list(stills.values()), OUT / "episode1_preview.jpg")
     (OUT / "episode1_youtube.txt").write_text(YOUTUBE.format(chapters=show.chapters_text(offset)))

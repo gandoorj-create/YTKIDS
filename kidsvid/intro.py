@@ -16,7 +16,7 @@ import math
 
 import numpy as np
 
-from . import art, rig, sing, sound
+from . import art, rig, sound
 from .anim import clamp, ease_out_back, ease_out_quad, place
 from .show import Actor, Show
 
@@ -220,6 +220,7 @@ def jingle():
 
 def voices(voice):
     """The singing. Returns (all voices mixed, the puppy's part, the kitten's part)."""
+    from . import sing  # needs pyworld (not on Windows: there the ready-made intro in assets/intro is used)
     call = [(b * BEAT, s, n, d * BEAT) for b, s, n, d in CALL]
     answer = [(b * BEAT, s, n, d * BEAT) for b, s, n, d in ANSWER]
     puppy = sing.sing(voice, call, LENGTH, formant=2 ** (3 / 12)) \
