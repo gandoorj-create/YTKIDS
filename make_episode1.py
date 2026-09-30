@@ -42,21 +42,30 @@ BONUS = [("orange", "orange", "Orange! Like an orange!"), ("grapes", "purple", "
 PARADE = [("balloon", "red"), ("fish", "blue"), ("star", "yellow"), ("frog", "green"), ("grapes", "purple")]
 
 YOUTUBE = """TITLE
-Learn Colors for Kids | Guess the Color Game | Toddler Learning Video
+Learn Colors for Kids with Maple & Domi | Guess the Color Game | Toddler Learning Video
 
-DESCRIPTION
-Let's learn colors with Maple the puppy and Domi the kitten! In this video, kids learn red, blue, yellow and green,
-find the right color, and play a fun guessing game. Kids can shout the answers!
+DESCRIPTION (copy all of it, the chapters too)
+Let's learn colors with Maple the puppy and Domi the kitten!
+In this video, kids learn red, blue, yellow and green, find the right color, and play a fun guessing game. Kids can shout the answers!
 For toddlers and preschool kids (2-5 years).
 
-CHAPTERS
 {chapters}
 
+Ask a grown-up to subscribe for more videos with Maple and Domi!
+
+#learncolors #toddlerlearning #kidsvideos
+
 TAGS
-learn colors, colors for kids, toddler learning video, preschool learning, guess the color, kids quiz
+learn colors, colors for kids, toddler learning video, preschool learning, guess the color, kids quiz, Maple and Domi, Yumizoo
 
 SETTINGS
+Thumbnail: episode1_thumbnail.jpg
 Audience: Yes, it's made for kids
+Age restriction: No
+Category: Education
+Video language: English
+Altered or synthetic content: No (a cartoon, nothing looks real)
+Paid promotion: No
 """
 
 
@@ -137,7 +146,8 @@ def main():
         make_intro(voice, opening)
         join([opening, body], Path(args.out))
     contact_sheet(list(stills.values()), OUT / "episode1_preview.jpg")
-    (OUT / "episode1_youtube.txt").write_text(YOUTUBE.format(chapters=show.chapters_text(offset)))
+    if not args.preview:  # the voice is a little different every time, so only the made video has true times
+        (OUT / "episode1_youtube.txt").write_text(YOUTUBE.format(chapters=show.chapters_text(offset)))
     thumbnail(OUT / "episode1_thumbnail.jpg")
     print("Done.")
 
