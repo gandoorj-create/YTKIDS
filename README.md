@@ -131,6 +131,15 @@ Why it is made like this (research, September 2026):
   ([Whizzy Studios](https://www.whizzystudios.com/post/kids-animation-trends-2026-whats-growing-on-youtube)):
   one clear action at a time, and a small new surprise that makes kids want to see what the characters do.
 
+## Channel pictures
+
+`python3 make_channel_art.py` makes the YouTube profile picture `channel_avatar.png` (800x800, YouTube shows it
+as a circle) and the banner `channel_banner.png` (2560x1440). On the banner, the logo, the words and Maple and
+Domi are in the middle part (1546x423) that phones show; computers show the full-width band, TVs everything.
+`channel_banner_check.jpg` marks these parts. The finished pictures are also in `designs/`.
+
+Upload: YouTube Studio → Customization → Branding → Picture / Banner image.
+
 ## 3D foal
 
 ```bash
@@ -146,6 +155,7 @@ python3 foal3d.py --preview
 | `make_episode1.py` | Episode 1: which parts, colors and things |
 | `make_scene.py` | A video from a scene file (the movements you choose) |
 | `scenes/` | Scene files: `example.txt`, `catalog.txt` (every movement) |
+| `make_channel_art.py` | The YouTube profile picture and banner |
 | `make_intro.py` | The channel intro, "Peek-a-boo! Yu-mi-zoo!" (3 surprises) |
 | `foal3d.py` | The foal in 3D (Blender) |
 | `kidsvid/lessons.py` | Building blocks: intro, color lesson, quiz round, guessing game, final challenge, goodbye |
