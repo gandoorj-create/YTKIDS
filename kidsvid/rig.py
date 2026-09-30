@@ -12,6 +12,7 @@ from .anim import clamp, ease_out_back, place
 from .show import FPS, W
 
 GROUND = 1000
+NAMES = {"puppy": "Maple", "kitten": "Domi"}  # written on their collar tags
 HOME = {"puppy": 660, "kitten": 1260}  # where each character stands
 MARK_SPOT = (540, 40)    # above the right ear: where "!", "?" and "Zzz" go (in the character picture)
 ROLL_PIVOT = (300, 330)  # the middle of the whole character (head and body), for somersaults
@@ -35,6 +36,7 @@ class Pose:
     paw_dy: tuple = (0.0, 0.0)
     arm_l: float = None        # None = paw on the ground, a number = arm up at that angle
     arm_r: float = None
+    tag: float = 0.0           # the name tag swings (degrees)
     eyes: str = "open"
     mouth: int = 0
     marks: list = field(default_factory=list)  # ("zzz" / "!" / "?" / "hearts", seconds)
@@ -73,9 +75,12 @@ class Character:
     """The puppy or the kitten, doing the movements it was given."""
     z = 3
 
-    def __init__(self, kind, colors, voice_pitch, seed=0, home=None, size=1.0):
-        """home: (x, y) of the feet on the screen. size: 1.0 = full size (about 500 pixels tall)."""
+    def __init__(self, kind, colors, voice_pitch, seed=0, home=None, size=1.0, name=None):
+        """home: (x, y) of the feet on the screen. size: 1.0 = full size (about 500 pixels tall).
+        name: written on the tag of its collar (None: its name from NAMES, "": no collar)."""
         self.kind = kind
+        self.name = NAMES[kind] if name is None else name
+        self.collar = art.collar_parts(kind, self.name) if self.name else None
         self.parts = art.puppy_parts(colors) if kind == "puppy" else art.kitten_parts(colors)
         self.pivots = art.PUPPY_PIVOTS if kind == "puppy" else art.KITTEN_PIVOTS
         self.home, self.ground = home if home else (HOME[kind], GROUND)
@@ -123,6 +128,8 @@ class Character:
         for start, end, name, options in self.moves:
             if start <= t < end:
                 MOVES[name].pose(self, p, t - start, end - start, options)
+        # The tag hangs down when the body rocks a little, and swings softly.
+        p.tag = 4 * math.sin(2 * math.pi * 0.9 * t + self.phase) - (0.7 * p.rot if abs(p.rot) < 30 else 0)
         for start, levels in self.talking:
             k = int((t - start) * FPS)
             if 0 <= k < len(levels) and levels[k]:
@@ -164,6 +171,10 @@ class Character:
                 continue  # the kitten's ears are part of its head
             pivot = self.pivots[name]
             if name == "head":
+                if self.collar:  # the collar goes around the neck, under the head
+                    collar, tag = self.collar
+                    put(collar, art.COLLAR_PIVOT, art.COLLAR_PIVOT)
+                    put(tag, art.TAG_PIVOT, art.TAG_PIVOT, p.tag)
                 put(self.parts["head"][(p.eyes, p.mouth)], pivot, (pivot[0], pivot[1] + p.head_dy), p.head_rot)
             elif name.startswith("ear"):
                 put(self.parts[name], pivot, on_head(pivot), p.head_rot + (p.ear_l if name == "ear_l" else p.ear_r))

@@ -6,7 +6,7 @@
     python3 make_scene.py --moves                       # all movements you can use
 
 A line:  <who> <movement> [options]
-  who:      puppy, kitten or both        (or "wait 1s" for a pause)
+  who:      puppy (or maple), kitten (or domi), or both   ("wait 1s" makes a pause)
   options:  a length like 2s, a side (left / right), or words in quotes for say: say "Hello!"
 """
 import argparse
@@ -36,7 +36,7 @@ def parse(path):
             raise SceneError(f"line {n}: {e} ({raw.strip()})")
         if not words:
             continue
-        who = words[0].lower()
+        who = {"maple": "puppy", "domi": "kitten"}.get(words[0].lower(), words[0].lower())
         if who == "wait":
             steps.append((n, "wait", None, words[1:]))
             continue

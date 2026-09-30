@@ -6,8 +6,9 @@ No camera and no drawing app are needed.
 ## The channel
 
 - Name: **Yumizoo** (yummy + zoo).
-- Two main characters: a very chubby golden **puppy** and a very chubby black-and-white (tuxedo) **kitten**
-  (names not chosen yet, see `designs/main_characters.jpg`).
+- Two main characters, both very chubby: **Maple**, a golden puppy with a red collar and a bone-shaped name tag,
+  and **Domi**, a black-and-white (tuxedo) kitten with a pink collar and a fish-shaped name tag
+  (see `designs/main_characters.jpg`). Their names are in `kidsvid/rig.py` (`NAMES`).
 - Earlier ideas are still in the code and in `designs/`: the foal Maple (also in 3D), the jelly Wobbaloo,
   Cupcake, Marshmallow and the lamb.
 
@@ -67,7 +68,7 @@ python3 make_scene.py scenes/example.txt --preview  # only still pictures (fast)
 python3 make_scene.py --moves                       # all movements
 ```
 
-- Who: `puppy`, `kitten` or `both`. `wait 1s` makes a pause.
+- Who: `puppy` (or `maple`), `kitten` (or `domi`), or `both`. `wait 1s` makes a pause.
 - Movements: `walk_in`, `walk_out`, `say`, `jump`, `happy`, `surprised`, `sleep`, `dance`, `roll`, `wag_tail`,
   `swish_tail`, `flop_ears`, `head_tilt`, `wave`.
 - Options: a length like `2s` (for `sleep`, `dance`, `wag_tail`, `swish_tail`, `wave`), a side `left` / `right`
@@ -84,7 +85,7 @@ The tune is always the same. Only a small surprise changes, so each episode can 
 | File | Surprise |
 | --- | --- |
 | `intro_boo.mp4` | both jump up together |
-| `intro_late.mp4` | the kitten comes up late and gets a surprise |
+| `intro_late.mp4` | the kitten comes up late and gets a surprise (our favorite, number 2) |
 | `intro_flip.mp4` | both do a flip in the air |
 
 What happens: the logo drops in. The ears of the puppy and the kitten peek over a hill. They sing "Peek-a..."

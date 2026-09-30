@@ -38,7 +38,7 @@ YOUTUBE = """TITLE
 Learn Colors for Kids | Guess the Color Game | Toddler Learning Video
 
 DESCRIPTION
-Let's learn colors with a chubby puppy and a little kitten! In this video, kids learn red, blue, yellow and green,
+Let's learn colors with Maple the puppy and Domi the kitten! In this video, kids learn red, blue, yellow and green,
 find the right color, and play a fun guessing game. Kids can shout the answers!
 For toddlers and preschool kids (2-5 years).
 

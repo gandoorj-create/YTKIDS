@@ -1019,3 +1019,51 @@ def heart(size=34, color=(255, 105, 150)):
     outlined(c, pts, color, shade(color, 0.75), 3)
     c.circle(m - size * 0.35, m - size * 0.3, size * 0.16, fill=(255, 255, 255, 220))
     return c.result()
+
+
+# ---------- collars with name tags ----------
+
+COLLAR_PIVOT, TAG_PIVOT = (300, 416), (300, 430)  # the middle of the collar, and the ring the tag hangs on
+COLLARS = {"puppy": ((232, 72, 84), (170, 42, 58), "bone"),  # collar, collar line, tag shape
+           "kitten": ((255, 116, 170), (198, 62, 118), "fish")}
+TAG_GOLD, TAG_LINE, TAG_INK = (255, 212, 96), (200, 142, 40), (122, 74, 28)
+
+
+@lru_cache(maxsize=None)
+def collar_parts(kind, name):
+    """A collar under the chin and a golden name tag (a bone for the puppy, a fish for the kitten).
+
+    Returns (collar, tag) parts, drawn in the same 600x600 picture as the other parts. The collar goes
+    behind the head, so its ends hide under the cheeks and it looks like it goes around the neck.
+    """
+    band, band_line, shape = COLLARS[kind]
+    c = Canvas(*PET_SIZE)
+    curve = bezier((196, 356), (240, 436), (360, 436), (404, 356))  # a U-shaped band
+    c.line(curve, band_line, 30)
+    c.line(curve, band, 20)
+    for k in range(2, 23, 4):  # little white stitches
+        x, y = curve[k]
+        c.circle(x, y, 2.6, fill=(255, 255, 255, 190))
+    collar = cut(c)
+
+    c = Canvas(*PET_SIZE)
+    x, y = 300, 470  # the middle of the tag
+    c.circle(TAG_PIVOT[0], TAG_PIVOT[1] + 4, 9, outline=TAG_LINE, width=4)  # the ring
+    for grow, fill in ((5, TAG_LINE), (0, TAG_GOLD)):  # the outline first, then the gold
+        if shape == "bone":
+            for dx in (-56, 56):
+                for dy in (-12, 12):
+                    c.circle(x + dx, y + dy, 17 + grow, fill=fill)
+            c.rounded_rect(x - 58 - grow, y - 17 - grow, x + 58 + grow, y + 17 + grow, 10, fill)
+        else:
+            c.ellipse(x - 10, y, 60 + grow, 27 + grow, fill=fill)
+            tail = [(x + 40, y), (x + 76 + grow, y - 26 - grow), (x + 76 + grow, y + 26 + grow)]
+            c.polygon(tail, fill)
+    img = c.result()
+    room, size = (104, 32) if shape == "bone" else (94, 30)
+    while font(size).getlength(name) > room and size > 14:  # long names get smaller letters
+        size -= 1
+    ImageDraw.Draw(img).text((x - (10 if shape == "fish" else 0), y + 1), name, font=font(size), fill=TAG_INK,
+                             anchor="mm")
+    box = img.getbbox()
+    return collar, Part(img.crop(box), box[0], box[1])

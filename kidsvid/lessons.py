@@ -35,7 +35,7 @@ def countdown(show, at, x, y):
     return at + 3 * COUNT_STEP
 
 
-INTRO_LINES = ((HOST, "Hello kids! I'm a puppy! Woof woof!"), (FRIEND, "And I'm a kitten! Meow!"),
+INTRO_LINES = ((HOST, "Hello kids! I'm Maple the puppy! Woof woof!"), (FRIEND, "And I'm Domi the kitten! Meow!"),
                (HOST, "Today we are learning colors!"), (FRIEND, "Red, blue, yellow and green!"),
                (HOST, "Are you ready? Let's go!"))
 
