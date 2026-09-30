@@ -1,0 +1,23 @@
+# Yumizoo movement catalog: every movement, one after another.
+# Make the video:  python3 make_scene.py scenes/catalog.txt --labels
+both    walk_in
+puppy   say         "Hi! I'm the puppy!"
+kitten  say         "And I'm the kitten!"
+both    jump
+puppy   happy
+kitten  happy
+puppy   surprised
+kitten  surprised
+puppy   wag_tail    2s
+kitten  swish_tail  2s
+puppy   flop_ears
+kitten  flop_ears
+puppy   head_tilt
+kitten  head_tilt
+puppy   wave        2s
+kitten  wave        2s
+both    dance       3s
+puppy   roll
+kitten  roll
+both    sleep       3s
+both    walk_out

@@ -1,0 +1,10 @@
+# A small scene. One line = one movement, in this order.
+# Change the lines, then make the video again:  python3 make_scene.py scenes/example.txt
+puppy   walk_in   left
+kitten  walk_in   right
+puppy   say       "Hi friends!"
+kitten  wave
+both    jump
+puppy   wag_tail  2s
+kitten  dance     3s
+both    sleep     2s

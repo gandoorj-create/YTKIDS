@@ -6,8 +6,8 @@ No camera and no drawing app are needed.
 ## The channel
 
 - Name: **Yumizoo** (yummy + zoo).
-- Two main characters: a very chubby **puppy** and a very chubby **kitten** (names and colors not chosen yet,
-  see `designs/main_characters.jpg`).
+- Two main characters: a very chubby golden **puppy** and a very chubby black-and-white (tuxedo) **kitten**
+  (names not chosen yet, see `designs/main_characters.jpg`).
 - Earlier ideas are still in the code and in `designs/`: the foal Maple (also in 3D), the jelly Wobbaloo,
   Cupcake, Marshmallow and the lamb.
 
@@ -42,6 +42,37 @@ python3 make_episode1.py --preview   # only still pictures (fast)
 To make a new episode, copy `make_episode1.py` and change the lists at the top (colors, things, questions).
 To add a new thing (for example a car), add a drawing function to `kidsvid/art.py` and put it in `THINGS`.
 
+## Scenes: choose the movements
+
+Write a scene file: one line = one movement, in order. Then make the video from it.
+
+```text
+puppy   walk_in   left
+kitten  walk_in   right
+puppy   say       "Hi friends!"
+kitten  wave
+both    jump
+puppy   wag_tail  2s
+kitten  dance     3s
+both    sleep     2s
+```
+
+```bash
+python3 make_scene.py scenes/example.txt            # makes output/example.mp4
+python3 make_scene.py scenes/catalog.txt --labels   # every movement, with its name on the screen
+python3 make_scene.py scenes/example.txt --preview  # only still pictures (fast)
+python3 make_scene.py --moves                       # all movements
+```
+
+- Who: `puppy`, `kitten` or `both`. `wait 1s` makes a pause.
+- Movements: `walk_in`, `walk_out`, `say`, `jump`, `happy`, `surprised`, `sleep`, `dance`, `roll`, `wag_tail`,
+  `swish_tail`, `flop_ears`, `head_tilt`, `wave`.
+- Options: a length like `2s` (for `sleep`, `dance`, `wag_tail`, `swish_tail`, `wave`), a side `left` / `right`
+  (for `walk_in`, `walk_out`, `roll`), and the words in quotes for `say`.
+- `#` starts a note that the program does not read.
+
+To add a new movement, write a function in `kidsvid/rig.py` that changes the pose, and add it to `MOVES`.
+
 ## Channel intro
 
 `python3 make_intro.py` makes 3 versions of the 6-second intro (tunes: chant, rising, wobbly) and
@@ -61,12 +92,15 @@ python3 foal3d.py --preview
 | File | What it does |
 | --- | --- |
 | `make_episode1.py` | Episode 1: which parts, colors and things |
+| `make_scene.py` | A video from a scene file (the movements you choose) |
+| `scenes/` | Scene files: `example.txt`, `catalog.txt` (every movement) |
 | `make_intro.py` | The channel intro (3 tunes to choose from) |
 | `foal3d.py` | The foal in 3D (Blender) |
 | `kidsvid/lessons.py` | Building blocks: intro, color lesson, quiz round, guessing game, final challenge, goodbye |
 | `kidsvid/intro.py` | The intro: tunes, the singing jelly, the logo |
 | `kidsvid/show.py` | The engine: timeline, talking lamb, confetti, making the video file |
-| `kidsvid/art.py` | Drawings: foal, lamb, jelly, cupcake, marshmallow, 14 things, background, text |
+| `kidsvid/rig.py` | The moving puppy and kitten: their parts, and every movement (`MOVES`) |
+| `kidsvid/art.py` | Drawings: puppy and kitten (in parts), foal, lamb, jelly, cupcake, marshmallow, 14 things, background, text |
 | `kidsvid/sound.py` | AI voice, music, sound effects, mixing |
 | `kidsvid/anim.py` | Animation helpers (movement curves, placing pictures) |
 | `make_demo.py` | The first 42-second demo (older code, made before the engine) |

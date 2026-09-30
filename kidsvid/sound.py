@@ -278,3 +278,24 @@ def write_wav(path, x):
         w.setsampwidth(2)
         w.setframerate(SR)
         w.writeframes(np.repeat(pcm[:, None], 2, axis=1).tobytes())
+
+
+def sfx_step():
+    """Soft little footstep."""
+    t = t_axis(0.09)
+    return 0.8 * (np.sin(2 * np.pi * 170 * t) * np.exp(-t / 0.025)
+                  + 0.3 * RNG.uniform(-1, 1, len(t)) * np.exp(-t / 0.006))
+
+
+def sfx_thump():
+    """Landing on the ground."""
+    t = t_axis(0.25)
+    f = 60 + 90 * np.exp(-t / 0.03)
+    return np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.08)
+
+
+def sfx_sparkle():
+    out = np.zeros(int(0.8 * SR))
+    for k, note in enumerate((84, 88, 91, 96)):
+        add(out, marimba(note, 0.5), 0.06 * k, 0.5)
+    return out

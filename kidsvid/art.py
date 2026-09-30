@@ -5,6 +5,8 @@ All coordinates in this file are in final pixels.
 """
 import math
 import random
+from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
@@ -148,6 +150,10 @@ def eyes(c, cx, cy, gap, rx, ry, mode="open"):
             c.circle(x + rx * 0.34, cy + ry * 0.4, rx * 0.2, fill=WHITE)
         elif mode == "blink":
             c.arc(x, cy, rx * 1.1, ry * 0.5, 15, 165, EYE, rx * 0.45)
+        elif mode == "wide":  # surprised
+            c.ellipse(x, cy, rx * 1.25, ry * 1.2, fill=EYE)
+            c.circle(x - rx * 0.35, cy - ry * 0.45, rx * 0.5, fill=WHITE)
+            c.circle(x + rx * 0.4, cy + ry * 0.45, rx * 0.22, fill=WHITE)
         else:  # "happy": ^ ^
             c.arc(x, cy + ry * 0.45, rx * 1.1, ry * 0.8, 195, 345, EYE, rx * 0.45)
 
@@ -789,8 +795,10 @@ def foal(colors="zeerd", eyes_mode="open", mouth=0):
 
 
 # ---------- the two main characters: a very chubby puppy and a very chubby kitten ----------
+# They are made of parts (tail, body, paws, raised arms, head, ears), so each part can move (see rig.py).
+# puppy() and kitten() put the parts together in the resting pose.
 
-PET_SIZE, PET_FEET = (600, 600), (300, 588)
+PET_SIZE, PET_FEET, PET_BODY_CENTER = (600, 600), (300, 588), (300, 452)
 PUPPY_COLORS = {  # body, ears and eye spot, muzzle and belly
     "cream": ((252, 238, 214), (214, 150, 90), (255, 250, 242)),
     "golden": ((242, 196, 120), (196, 136, 66), (255, 238, 206)),
@@ -801,7 +809,30 @@ KITTEN_COLORS = {  # body, stripes, muzzle and belly
     "orange": ((250, 172, 92), (222, 122, 52), (255, 240, 220)),
     "tuxedo": ((78, 76, 92), (58, 56, 70), (255, 255, 255)),
 }
-NOSE_PINK = (255, 140, 165)
+NOSE_PINK, PAD_PINK = (255, 140, 165), (255, 172, 192)
+EYE_MODES = ("open", "blink", "happy", "wide")
+PART_ORDER = ["tail", "body", "paw_l", "paw_r", "head", "ear_l", "ear_r"]  # from back to front
+PUPPY_PIVOTS = {"body": PET_FEET, "tail": (486, 446), "paw_l": (236, 546), "paw_r": (364, 546),
+                "arm_l": (150, 432), "arm_r": (450, 432), "head": (300, 386), "ear_l": (150, 146), "ear_r": (450, 146)}
+KITTEN_PIVOTS = {"body": PET_FEET, "tail": (450, 490), "paw_l": (236, 546), "paw_r": (364, 546),
+                 "arm_l": (150, 432), "arm_r": (450, 432), "head": (300, 394)}
+
+
+@dataclass
+class Part:
+    """One piece of a character, cut out of the full character picture at (ox, oy)."""
+    img: Image.Image
+    ox: int
+    oy: int
+
+    def anchor(self, pivot):
+        return pivot[0] - self.ox, pivot[1] - self.oy
+
+
+def cut(c):
+    img = c.result()
+    box = img.getbbox()
+    return Part(img.crop(box), box[0], box[1])
 
 
 def is_dark(color):
@@ -819,17 +850,27 @@ def bezier(p0, p1, p2, p3, n=24):
     return pts
 
 
-def paws(c, cx, y, color, line, spread, size):
-    for x in (cx - spread, cx + spread):
-        c.ellipse(x, y, size, size * 0.6, fill=color, outline=line, width=4)
-        for dx in (-size * 0.35, 0, size * 0.35):
-            c.line([(x + dx, y + size * 0.18), (x + dx, y + size * 0.48)], line, 3)
+def paw(c, x, y, color, line, size):
+    c.ellipse(x, y, size, size * 0.6, fill=color, outline=line, width=4)
+    for dx in (-size * 0.35, 0, size * 0.35):
+        c.line([(x + dx, y + size * 0.18), (x + dx, y + size * 0.48)], line, 3)
+
+
+def raised_arm(c, shoulder, hand, color, line, paw_color, paw_line, size=44):
+    """A chubby arm held up, with the paw pad showing (for waving and dancing)."""
+    c.line([shoulder, hand], line, 1.25 * size + 8)
+    c.line([shoulder, hand], color, 1.25 * size)
+    c.circle(hand[0], hand[1], size * 0.78, fill=paw_color, outline=paw_line, width=4)
+    c.ellipse(hand[0], hand[1] + size * 0.12, size * 0.34, size * 0.26, fill=PAD_PINK)
+    for dx, dy in ((-0.36, -0.32), (0, -0.44), (0.36, -0.32)):
+        c.circle(hand[0] + dx * size, hand[1] + dy * size, size * 0.12, fill=PAD_PINK)
 
 
 def pet_eyes(c, cx, cy, gap, body, eyes_mode):
-    if is_dark(body) and eyes_mode == "open":  # light rings, so dark eyes show on dark fur
+    if is_dark(body) and eyes_mode in ("open", "wide"):  # light rings, so dark eyes show on dark fur
+        grow = 1.25 if eyes_mode == "wide" else 1.0
         for x in (cx - gap, cx + gap):
-            c.ellipse(x, cy, 28, 34, fill=(236, 236, 246))
+            c.ellipse(x, cy, 28 * grow, 34 * grow, fill=(236, 236, 246))
     eyes(c, cx, cy, gap, 22, 28, eyes_mode)
 
 
@@ -844,7 +885,9 @@ def pet_mouth(c, cx, y, mouth):
 
 
 def chubby_body(c, cx, body, line, light):
-    """Wide, round body with a light belly; the head sits right on it (no neck)."""
+    """Wide, round body with a light belly and the back feet; the head sits right on it (no neck)."""
+    for side in (-1, 1):
+        c.ellipse(cx + side * 150, 566, 47, 26, fill=shade(body, 0.9), outline=line, width=4)
     trunk = c.layer()
     blob(trunk, [(cx, 442, 200, 124), (cx, 472, 186, 104)], body, line, 5)
     c.paste(trunk)
@@ -853,67 +896,126 @@ def chubby_body(c, cx, body, line, light):
     c.paste(belly, mask=trunk)
 
 
-def puppy(colors="cream", eyes_mode="open", mouth=0):
-    """A very chubby puppy with floppy ears and a spot around one eye."""
-    body, patch, light = PUPPY_COLORS[colors] if isinstance(colors, str) else colors
+def limbs(parts, cx, color, line, paw_color, paw_line):
+    for name, side in (("l", -1), ("r", 1)):
+        c = Canvas(*PET_SIZE)
+        paw(c, cx + side * 64, 568, paw_color, paw_line, 47)
+        parts["paw_" + name] = cut(c)
+        c = Canvas(*PET_SIZE)
+        raised_arm(c, (cx + side * 150, 432), (cx + side * 238, 300), color, line, paw_color, paw_line)
+        parts["arm_" + name] = cut(c)
+
+
+@lru_cache(maxsize=None)
+def puppy_parts(colors="golden"):
+    body, patch, light = PUPPY_COLORS[colors]
     line, patch_line = shade(body, 0.72), shade(patch, 0.7)
-    cx = 300
+    cx, parts = 300, {}
     c = Canvas(*PET_SIZE)
-    outlined(c, ellipse_pts(cx + 222, 404, 28, 56, 40), patch, patch_line, 4)  # wagging tail
-    for side in (-1, 1):
-        c.ellipse(cx + side * 150, 566, 48, 26, fill=shade(body, 0.9), outline=line, width=4)
+    outlined(c, ellipse_pts(cx + 222, 404, 28, 56, 40), patch, patch_line, 4)
+    parts["tail"] = cut(c)
+    c = Canvas(*PET_SIZE)
     chubby_body(c, cx, body, line, light)
-    paws(c, cx, 568, body, line, 64, 48)
-    head = c.layer()
-    blob(head, [(cx, 246, 186, 150), (cx - 124, 304, 90, 72), (cx + 124, 304, 90, 72)], body, line, 5)
-    c.paste(head)
-    spot = c.layer()
-    spot.ellipse(cx + 60, 236, 60, 54, fill=patch)
-    c.paste(spot, mask=head)
-    for side in (-1, 1):  # floppy ears
+    parts["body"] = cut(c)
+    limbs(parts, cx, body, line, body, line)
+    for name, side in (("l", -1), ("r", 1)):  # floppy ears
+        c = Canvas(*PET_SIZE)
         outlined(c, ellipse_pts(cx + side * 180, 238, 56, 102, side * -16), patch, patch_line, 5)
-    c.ellipse(cx, 324, 82, 52, fill=light, outline=shade(light, 0.85), width=3)
-    pet_eyes(c, cx, 240, 60, body, eyes_mode)
-    blush(c, [(cx - 124, 310, 30, 17), (cx + 124, 310, 30, 17)], blush_color(body))
-    c.ellipse(cx, 296, 27, 19, fill=(62, 48, 56))
-    c.circle(cx - 8, 290, 6, fill=WHITE)
-    pet_mouth(c, cx, 330, mouth)
-    return c.result()
+        parts["ear_" + name] = cut(c)
+    heads = {}
+    for eyes_mode in EYE_MODES:
+        for mouth in range(6):
+            c = Canvas(*PET_SIZE)
+            head = c.layer()
+            blob(head, [(cx, 246, 186, 150), (cx - 124, 304, 90, 72), (cx + 124, 304, 90, 72)], body, line, 5)
+            c.paste(head)
+            spot = c.layer()
+            spot.ellipse(cx + 60, 236, 60, 54, fill=patch)
+            c.paste(spot, mask=head)
+            c.ellipse(cx, 324, 82, 52, fill=light, outline=shade(light, 0.85), width=3)
+            pet_eyes(c, cx, 240, 60, body, eyes_mode)
+            blush(c, [(cx - 124, 310, 30, 17), (cx + 124, 310, 30, 17)], blush_color(body))
+            c.ellipse(cx, 296, 27, 19, fill=(62, 48, 56))
+            c.circle(cx - 8, 290, 6, fill=WHITE)
+            pet_mouth(c, cx, 330, mouth)
+            heads[(eyes_mode, mouth)] = cut(c)
+    parts["head"] = heads
+    return parts
 
 
-def kitten(colors="grey", eyes_mode="open", mouth=0):
-    """A very chubby kitten with a curly tail, stripes on its forehead and whiskers."""
-    body, stripe, light = KITTEN_COLORS[colors] if isinstance(colors, str) else colors
+@lru_cache(maxsize=None)
+def kitten_parts(colors="tuxedo"):
+    body, stripe, light = KITTEN_COLORS[colors]
     line = shade(body, 0.72)
-    cx = 300
+    cx, parts = 300, {}
     c = Canvas(*PET_SIZE)
     tail = bezier((cx + 150, 490), (cx + 280, 480), (cx + 285, 330), (cx + 212, 306))
     c.line(tail, line, 46)
     c.line(tail, body, 36)
-    for side in (-1, 1):
-        c.ellipse(cx + side * 150, 566, 46, 26, fill=shade(body, 0.9), outline=line, width=4)
+    parts["tail"] = cut(c)
+    c = Canvas(*PET_SIZE)
     chubby_body(c, cx, body, line, light)
-    paws(c, cx, 568, light, shade(light, 0.78), 64, 46)
-    for side in (-1, 1):  # pointy ears
-        outlined(c, [(cx + side * 168, 186), (cx + side * 144, 56), (cx + side * 56, 126)], body, line, 5, rounding=28)
-        c.polygon([(cx + side * 152, 168), (cx + side * 142, 90), (cx + side * 84, 132)], (255, 185, 200))
-    head = c.layer()
-    for side in (-1, 1):  # fluffy cheeks
-        outlined(head, [(cx + side * 200, 282), (cx + side * 232, 306), (cx + side * 200, 328)], body, line, 4, rounding=10)
-    blob(head, [(cx, 252, 200, 150), (cx - 132, 304, 82, 68), (cx + 132, 304, 82, 68)], body, line, 5)
-    c.paste(head)
-    stripes = c.layer()
-    for dx, h in ((-34, 44), (0, 58), (34, 44)):
-        stripes.line([(cx + dx, 102), (cx + dx * 0.8, 110 + h)], stripe, 12)
-    c.paste(stripes, mask=head)
-    for side in (-1, 1):
-        c.circle(cx + side * 25, 320, 33, fill=light)
+    parts["body"] = cut(c)
+    limbs(parts, cx, body, line, light, shade(light, 0.78))
     whisker = (220, 220, 232) if is_dark(body) else shade(body, 0.5)
-    for side in (-1, 1):
-        for dy in (-12, 2, 16):
-            c.line([(cx + side * 62, 318 + dy * 0.5), (cx + side * 140, 306 + dy * 1.5)], whisker, 3)
-    pet_eyes(c, cx, 246, 64, body, eyes_mode)
-    blush(c, [(cx - 128, 302, 30, 17), (cx + 128, 302, 30, 17)], blush_color(body))
-    outlined(c, [(cx - 14, 296), (cx + 14, 296), (cx, 311)], NOSE_PINK, shade(NOSE_PINK, 0.85), 2, rounding=8)
-    pet_mouth(c, cx, 332, mouth)
+    heads = {}
+    for eyes_mode in EYE_MODES:
+        for mouth in range(6):
+            c = Canvas(*PET_SIZE)
+            for side in (-1, 1):  # pointy ears
+                outlined(c, [(cx + side * 168, 186), (cx + side * 144, 56), (cx + side * 56, 126)], body, line, 5,
+                         rounding=28)
+                c.polygon([(cx + side * 152, 168), (cx + side * 142, 90), (cx + side * 84, 132)], (255, 185, 200))
+            head = c.layer()
+            for side in (-1, 1):  # fluffy cheeks
+                outlined(head, [(cx + side * 200, 282), (cx + side * 232, 306), (cx + side * 200, 328)], body, line, 4,
+                         rounding=10)
+            blob(head, [(cx, 252, 200, 150), (cx - 132, 304, 82, 68), (cx + 132, 304, 82, 68)], body, line, 5)
+            c.paste(head)
+            stripes = c.layer()
+            for dx, h in ((-34, 44), (0, 58), (34, 44)):
+                stripes.line([(cx + dx, 102), (cx + dx * 0.8, 110 + h)], stripe, 12)
+            c.paste(stripes, mask=head)
+            for side in (-1, 1):
+                c.circle(cx + side * 25, 320, 33, fill=light)
+            for side in (-1, 1):
+                for dy in (-12, 2, 16):
+                    c.line([(cx + side * 62, 318 + dy * 0.5), (cx + side * 140, 306 + dy * 1.5)], whisker, 3)
+            pet_eyes(c, cx, 246, 64, body, eyes_mode)
+            blush(c, [(cx - 128, 302, 30, 17), (cx + 128, 302, 30, 17)], blush_color(body))
+            outlined(c, [(cx - 14, 296), (cx + 14, 296), (cx, 311)], NOSE_PINK, shade(NOSE_PINK, 0.85), 2, rounding=8)
+            pet_mouth(c, cx, 332, mouth)
+            heads[(eyes_mode, mouth)] = cut(c)
+    parts["head"] = heads
+    return parts
+
+
+def rest_pose(parts, eyes_mode, mouth):
+    img = Image.new("RGBA", PET_SIZE, (0, 0, 0, 0))
+    for name in PART_ORDER:
+        part = parts["head"][(eyes_mode, mouth)] if name == "head" else parts.get(name)
+        if part is not None:
+            img.alpha_composite(part.img, (part.ox, part.oy))
+    return img
+
+
+def puppy(colors="golden", eyes_mode="open", mouth=0):
+    """A very chubby puppy with floppy ears and a spot around one eye."""
+    return rest_pose(puppy_parts(colors), eyes_mode, mouth)
+
+
+def kitten(colors="tuxedo", eyes_mode="open", mouth=0):
+    """A very chubby kitten with a curly tail, stripes on its forehead and whiskers."""
+    return rest_pose(kitten_parts(colors), eyes_mode, mouth)
+
+
+def heart(size=34, color=(255, 105, 150)):
+    c = Canvas(2 * size + 24, 2 * size + 24)
+    m = size + 12
+    k = size / 17
+    pts = [(m + k * 16 * math.sin(t) ** 3,
+            m - k * (13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)))
+           for t in (2 * math.pi * i / 64 for i in range(64))]
+    outlined(c, pts, color, shade(color, 0.75), 3)
+    c.circle(m - size * 0.35, m - size * 0.3, size * 0.16, fill=(255, 255, 255, 220))
     return c.result()
