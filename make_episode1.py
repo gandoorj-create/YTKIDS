@@ -13,7 +13,7 @@ from pathlib import Path
 
 import imageio_ffmpeg
 
-from kidsvid import art, intro, lessons, rig, sound
+from kidsvid import art, endcard, intro, lessons, rig, sound
 from kidsvid.anim import place
 from kidsvid.show import Show, contact_sheet
 
@@ -74,6 +74,7 @@ def build(voice):
     lessons.guessing_game(show, GAME)
     lessons.final_challenge(show, ["red", "blue", "yellow", "green"], BONUS)
     lessons.goodbye(show, PARADE)
+    endcard.end_card(show)
     return show
 
 

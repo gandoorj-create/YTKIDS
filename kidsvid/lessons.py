@@ -257,33 +257,30 @@ def final_challenge(show, colors, bonus):
     show.t = end + 0.1
 
 
-GOODBYE_LINES = ((HOST, "Great job, friends! You know your colors!"), (FRIEND, "See you in the next video! Bye-bye!"))
+GOODBYE_LINES = ((HOST, "Great job, friends! You know your colors!"),)
 
 
 def goodbye(show, parade, lines=GOODBYE_LINES, title="Great job!"):
-    """Title, a row of happy things, and the puppy and the kitten wave goodbye. This ends the show."""
+    """Title, a row of happy things and a big cheer. Then comes the end card (endcard.py), which says bye-bye."""
     show.chapter("Goodbye")
     t0 = show.t
     t = t0 + 0.9
     for who, line in lines:
-        start = t
         t = show.say(line, t, who) + 0.3
     last = t - 0.3
-    end = max(last + 3.0, t0 + 11)
-    for who in (HOST, FRIEND):
-        show.act(who, "wave", start, seconds=end - start)
-    show.add(Letters(show.title(title, 170), t0 + 0.1, end + 5, 960, 250))
+    end = last + 2.6
+    show.add(Letters(show.title(title, 170), t0 + 0.1, end - 0.6, 960, 250))
     plinks(show, t0 + 0.1, title)
     n = len(parade)
     for k, (thing, color) in enumerate(parade):
         at = t0 + 0.4 + 0.18 * k
         spr, anc = show.thing(thing, color)
-        show.add(Actor(spr, anc, at, end + 5, 960 + (k - (n - 1) / 2) * 260, 600, scale=0.44, bob=18,
+        show.add(Actor(spr, anc, at, end, 960 + (k - (n - 1) / 2) * 260, 600, scale=0.44, bob=18,
                        phase=-0.9 * k))
         show.sfx(at, sound.sfx_pop(), 0.3)
-    show.happy_from = last
     show.cheer(last + 0.1, (960, 250), n=110, move="happy")
     show.sfx(last + 0.1, sound.sfx_chime(), 0.45)
-    show.loud_music.append((t0, end + 1))
+    show.sfx(end - 0.5, sound.sfx_whoosh(), 0.3)
+    show.loud_music.append((t0, end))
     show.snap(last + 0.5, "goodbye")
     show.t = end

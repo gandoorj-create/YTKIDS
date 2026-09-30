@@ -23,10 +23,13 @@ No camera and no drawing app are needed.
 | 2:25 | Green |
 | 3:09 | Guessing game: 10 questions, all colors mixed |
 | 4:31 | Final challenge: kids say every color, then 2 new colors for next time (orange, purple) |
-| 4:57 | Goodbye |
+| 4:57 | Goodbye: "Great job!", then the end card: "Thanks for watching!", Domi asks a grown-up to tap like and subscribe, a paw taps both buttons, and Maple and Domi wave bye-bye |
 
 Maple the puppy (bottom left) and Domi the kitten (bottom right) take turns saying the lines. They jump for joy at every
 right answer, tilt their heads while kids think, dance after the final challenge and wave goodbye.
+
+The end card is drawn in the video (`kidsvid/endcard.py`), because "made for kids" videos have no clickable
+end screens and no notification bell on YouTube. It asks a grown-up, not the child, to like and subscribe.
 
 Kids get time to answer: the countdown is 3 seconds, and after "Can you say red?" there is a pause.
 The times move a little each time we make the video, because the AI voice is a little different each time.
@@ -132,6 +135,7 @@ python3 foal3d.py --preview
 | `make_intro.py` | The channel intro, "Peek-a-boo! Yu-mi-zoo!" (3 surprises) |
 | `foal3d.py` | The foal in 3D (Blender) |
 | `kidsvid/lessons.py` | Building blocks: intro, color lesson, quiz round, guessing game, final challenge, goodbye |
+| `kidsvid/endcard.py` | The end card: like and subscribe buttons, the tapping paw |
 | `kidsvid/intro.py` | The intro: the tune, the hill, the peeking puppy and kitten, the logo |
 | `kidsvid/sing.py` | Singing: puts the AI voice on musical notes (WORLD vocoder) |
 | `kidsvid/show.py` | The engine: timeline, talking characters, confetti, making the video file |
