@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 from kidsvid import rig, sound
-from kidsvid.show import FPS, Actor, Show, contact_sheet
+from kidsvid.show import Actor, Show, contact_sheet
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "output"
@@ -64,8 +64,9 @@ def seconds(options, default):
 def build(steps, voice, labels):
     show = Show(voice, mascot=False)
     show.music_level = 0.06
-    cast = {"puppy": rig.Character("puppy", "golden", voice_pitch=3, seed=1),
-            "kitten": rig.Character("kitten", "tuxedo", voice_pitch=6, seed=2)}
+    show.join(rig.Character("puppy", "golden", voice_pitch=3, seed=1))
+    show.join(rig.Character("kitten", "tuxedo", voice_pitch=6, seed=2))
+    cast = show.cast
     t = 0.4
     for n, who, move, options in steps:
         if who == "wait":
@@ -74,12 +75,7 @@ def build(steps, voice, labels):
         names = ["puppy", "kitten"] if who == "both" else [who]
         spec = rig.MOVES[move]
         if move == "say":
-            d = 0.0
-            for name in names:
-                clip = cast[name].say(voice, options[0])
-                show.voices.append((t, clip))
-                cast[name].talking.append((t, sound.mouth_levels(clip, FPS)))
-                d = max(d, len(clip) / sound.SR + 0.3)
+            d = max(show.say(options[0], t, name) for name in names) - t + 0.3
         else:
             d = seconds(options, spec.length) if spec.timed else spec.length
         for name in names:
@@ -92,8 +88,6 @@ def build(steps, voice, labels):
             show.add(Actor(sprite, anchor, t, t + d + 0.1, 960, 110, z=8))
         show.snap(t + 0.5 * d, f"{n:02d} {who} {move}")
         t += d + GAP
-    for character in cast.values():
-        show.add(character)
     show.t = t + 0.8
     return show
 

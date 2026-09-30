@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Episode 1: "Learn Colors for Kids" (about 5 minutes).
 
-    python3 make_episode1.py              # full video -> output/episode1_learn_colors.mp4 (about 12 minutes)
+    python3 make_episode1.py              # full video -> output/episode1_learn_colors.mp4 (about 20 minutes)
     python3 make_episode1.py --preview    # only still pictures (fast)
 
 Also makes: episode1_thumbnail.jpg, episode1_preview.jpg and episode1_youtube.txt (title, description, chapters).
@@ -9,7 +9,7 @@ Also makes: episode1_thumbnail.jpg, episode1_preview.jpg and episode1_youtube.tx
 import argparse
 from pathlib import Path
 
-from kidsvid import art, lessons, sound
+from kidsvid import art, lessons, rig, sound
 from kidsvid.anim import place
 from kidsvid.show import Show, contact_sheet
 
@@ -38,7 +38,7 @@ YOUTUBE = """TITLE
 Learn Colors for Kids | Guess the Color Game | Toddler Learning Video
 
 DESCRIPTION
-Let's learn colors with our little lamb! In this video, kids learn red, blue, yellow and green,
+Let's learn colors with a chubby puppy and a little kitten! In this video, kids learn red, blue, yellow and green,
 find the right color, and play a fun guessing game. Kids can shout the answers!
 For toddlers and preschool kids (2-5 years).
 
@@ -53,8 +53,16 @@ Audience: Yes, it's made for kids
 """
 
 
+def cast():
+    """The puppy (bottom left) and the kitten (bottom right)."""
+    return (rig.Character("puppy", "golden", voice_pitch=3, seed=1, home=(240, 1064), size=0.65),
+            rig.Character("kitten", "tuxedo", voice_pitch=6, seed=2, home=(1700, 1064), size=0.65))
+
+
 def build(voice):
-    show = Show(voice)
+    show = Show(voice, mascot=False)
+    for character in cast():
+        show.join(character)
     lessons.intro(show, ("Let's Learn", "Colors!"), HOOK)
     for color, things, find, odd, quizzes in LESSONS:
         lessons.color_lesson(show, color, things, find, odd, quizzes)
@@ -68,12 +76,14 @@ def thumbnail(path):
     img = art.background(1920, 1080)
     for spr, anchor, dx in art.title_letters("Learn Colors!", 200):
         place(img, spr, 960 + dx, 290, anchor=anchor)
-    for thing, color, x, y, s, rot in (("balloon", "red", 960, 640, 0.72, 6), ("star", "yellow", 1330, 600, 0.62, -8),
-                                       ("frog", "green", 1690, 700, 0.56, 4), ("fish", "blue", 1180, 900, 0.55, -5),
-                                       ("apple", "red", 1580, 950, 0.45, 8)):
+    for thing, color, x, y, s, rot in (("balloon", "red", 1130, 620, 0.66, 6), ("star", "yellow", 1460, 570, 0.6, -8),
+                                       ("frog", "green", 1760, 720, 0.5, 4), ("fish", "blue", 1270, 900, 0.52, -5),
+                                       ("apple", "red", 1620, 950, 0.45, 8)):
         spr, anc = art.THINGS[thing](art.COLORS[color])
         place(img, spr, x, y, s, rot=rot, anchor=anc)
-    place(img, art.lamb("happy", 3), 380, 1070, 1.45, anchor=art.LAMB_FEET)
+    for kind, colors, x in (("puppy", "golden", 290), ("kitten", "tuxedo", 740)):  # both cheering, arms up
+        ch = rig.Character(kind, colors, 0, home=(x, 1085), size=0.92)
+        ch.draw_pose(img, rig.Pose(x, 1085, arm_l=14, arm_r=-14, eyes="happy", mouth=3))
     img.resize((1280, 720), resample=3).save(path, quality=92)
 
 

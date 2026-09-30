@@ -1,15 +1,21 @@
 """Building blocks for episodes: intro, color lesson, quiz round, guessing game, final challenge, goodbye.
 
 Each block starts at `show.t`, puts its pictures and sounds on the timeline, and moves `show.t` forward.
+The puppy (HOST) and the kitten (FRIEND) take turns saying the lines.
 """
 from . import art, sound
 from .show import COUNT_STEP, Actor, Countdown, Letters
 
-STAGE = (960, 520)                            # one big thing in the middle
-SLOTS = [(640, 500), (1020, 500), (1400, 500)]  # three things in a row
+STAGE = (960, 520)                           # one big thing in the middle
+SLOTS = [(580, 500), (960, 500), (1340, 500)]  # three things in a row
 TOP = (960, 118)                              # question text
 SCALE = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19, 21, 23]  # C major scale, for the letter "plinks"
 PRAISE = ["You got it!", "Great job!", "Well done!", "Awesome!", "Super!"]
+HOST, FRIEND = "puppy", "kitten"  # who says the lines
+
+
+def other(who):
+    return FRIEND if who == HOST else HOST
 
 
 def a_or_an(word):
@@ -29,18 +35,24 @@ def countdown(show, at, x, y):
     return at + 3 * COUNT_STEP
 
 
-def intro(show, title_lines, hook, lines=("Hello kids!", "Baa! I'm a little lamb!", "Today we are learning colors!",
-                                          "Red, blue, yellow and green!", "Are you ready? Let's go!")):
-    """Strong start: colorful things pop up at once, the title falls in, the lamb says hello."""
+INTRO_LINES = ((HOST, "Hello kids! I'm a puppy! Woof woof!"), (FRIEND, "And I'm a kitten! Meow!"),
+               (HOST, "Today we are learning colors!"), (FRIEND, "Red, blue, yellow and green!"),
+               (HOST, "Are you ready? Let's go!"))
+
+
+def intro(show, title_lines, hook, lines=INTRO_LINES):
+    """Strong start: colorful things pop up at once, the title falls in, the puppy and the kitten walk in."""
     show.chapter("Intro")
     t0 = show.t
+    show.act(HOST, "walk_in", t0)
+    show.act(FRIEND, "walk_in", t0 + 0.25)
     t = t0 + 0.5
-    for line in lines:
+    for who, line in lines:
         last = t
-        t = show.say(line, t) + 0.2
+        t = show.say(line, t, who) + 0.2
     show.cheer(last)
     end = max(t + 0.7, t0 + 11)  # YouTube chapters must be 10+ seconds
-    spots = [(330, 170), (800, 150), (1590, 170), (1580, 820), (1180, 850), (780, 840)]
+    spots = [(330, 170), (800, 150), (1590, 170), (1300, 850), (960, 880), (620, 850)]
     for k, ((name, color), (x, y)) in enumerate(zip(hook, spots)):
         spr, anc = show.thing(name, color)
         show.add(Actor(spr, anc, t0 + 0.08 * k, end, x, y, scale=0.36, bob=10, wobble=5, phase=k))
@@ -57,12 +69,13 @@ def intro(show, title_lines, hook, lines=("Hello kids!", "Baa! I'm a little lamb
     show.t = end + 0.2
 
 
-def quiz_round(show, thing, color, answer):
-    """One thing in the middle: "What color is this ...?" 3, 2, 1, then the answer."""
+def quiz_round(show, thing, color, answer, asker=HOST):
+    """One thing in the middle: "What color is this ...?" 3, 2, 1, then the other character answers."""
     t0 = show.t
-    q_end = show.say(f"What color is this {thing}?", t0 + 0.6)
+    q_end = show.say(f"What color is this {thing}?", t0 + 0.6, asker)
     reveal = countdown(show, q_end + 0.35, 1480, 520)
-    end = show.say(answer, reveal + 0.3) + 0.75
+    show.act(other(asker), "head_tilt", q_end + 0.35)  # thinks with the kids
+    end = show.say(answer, reveal + 0.3, other(asker)) + 0.75
     spr, anc = show.thing(thing, color)
     show.add(Actor(show.stage, None, t0, end, *STAGE, z=0))
     show.add(Actor(spr, anc, t0 + 0.05, end, *STAGE, bob=14, wobble=4, jumps=[reveal]))
@@ -78,11 +91,13 @@ def quiz_round(show, thing, color, answer):
     return reveal
 
 
-def pick_one(show, choices, right, ask_text, ask_line, answer_line):
+def pick_one(show, choices, right, ask_text, ask_line, answer_line, asker=HOST):
     """Three things in a row. Kids choose one; after 3, 2, 1 the right one jumps in a golden circle."""
     t0 = show.t
-    reveal = countdown(show, show.say(ask_line, t0 + 0.6) + 0.3, 1720, 500)
-    end = show.say(answer_line, reveal + 0.3) + 0.8
+    think = show.say(ask_line, t0 + 0.6, asker) + 0.3
+    reveal = countdown(show, think, 1720, 500)
+    show.act(other(asker), "head_tilt", think)
+    end = show.say(answer_line, reveal + 0.3, other(asker)) + 0.8
     for k, (thing, color) in enumerate(choices):
         spr, anc = show.thing(thing, color)
         ok = k == right
@@ -107,10 +122,10 @@ def color_lesson(show, color, things, find, odd, quiz_things):
 
     # 1. Meet the color: a paint splash with a face. Kids can say the color.
     t0 = show.t
-    t1 = show.say(f"This is {color}!", t0 + 0.5)
-    t2 = show.say(f"Can you say {color}?", t1 + 0.25)
+    t1 = show.say(f"This is {color}!", t0 + 0.5, HOST)
+    t2 = show.say(f"Can you say {color}?", t1 + 0.25, FRIEND)
     t3 = t2 + 1.8  # time for kids to say it
-    end = show.say(f"{name}!", t3) + 0.9
+    end = show.say(f"{name}!", t3, HOST) + 0.9
     spr, anc = show.splat(color)
     show.add(Actor(spr, anc, t0, end, 960, 500, bob=10, wobble=2, jumps=[t3]))
     word, wa = show.text(name, 170, rgb)
@@ -126,12 +141,12 @@ def color_lesson(show, color, things, find, odd, quiz_things):
     # 2. Three things with this color, one by one.
     t = end + 0.1
     starts = []
-    for thing in things:
+    for k, thing in enumerate(things):
         starts.append(t)
         show.sfx(t, sound.sfx_pop(), 0.35)
-        t = show.say(f"{a_or_an(color).capitalize()} {color} {thing}!", t + 0.35) + 0.3
+        t = show.say(f"{a_or_an(color).capitalize()} {color} {thing}!", t + 0.35, (HOST, FRIEND)[k % 2]) + 0.3
     together = t + 0.1
-    end = show.say(f"They are all {color}!", together) + 0.8
+    end = show.say(f"They are all {color}!", together, (HOST, FRIEND)[len(things) % 2]) + 0.8
     for k, thing in enumerate(things):
         spr, anc = show.thing(thing, color)
         show.add(Actor(spr, anc, starts[k], end, *SLOTS[k], scale=0.6, bob=8, wobble=3, phase=k,
@@ -147,19 +162,19 @@ def color_lesson(show, color, things, find, odd, quiz_things):
     show.t = end + 0.1
     right = next(k for k, (_, c) in enumerate(find) if c == color)
     reveal = pick_one(show, find, right, f"Find the {color} one!", f"Can you find the {color} one?",
-                      f"Here it is! The {color} {find[right][0]}!")
+                      f"Here it is! The {color} {find[right][0]}!", asker=HOST)
     show.snap(reveal + 0.5, f"{color}: find")
 
     # 4. Odd one out: two things have this color, one does not.
     right = next(k for k, (_, c) in enumerate(odd) if c != color)
-    thing, other = odd[right]
+    thing, not_color = odd[right]
     pick_one(show, odd, right, f"Which one is not {color}?", f"Which one is not {color}?",
-             f"The {thing} is not {color}! It's {other}!")
+             f"The {thing} is not {color}! It's {not_color}!", asker=FRIEND)
 
     # 5. Quiz rounds.
     for k, thing in enumerate(quiz_things):
         answer = f"{name}! Great job!" if k % 2 == 0 else f"{name}! It's {a_or_an(color)} {color} {thing}!"
-        reveal = quiz_round(show, thing, color, answer)
+        reveal = quiz_round(show, thing, color, answer, asker=(HOST, FRIEND)[k % 2])
         if k == 0:
             show.snap(reveal + 0.6, f"{color}: quiz")
 
@@ -168,7 +183,8 @@ def guessing_game(show, items):
     """A title card, then one quiz round for each (thing, color)."""
     show.chapter("Guessing game")
     t0 = show.t
-    end = show.say("Can you guess the color?", show.say("Now let's play a guessing game!", t0 + 0.6) + 0.2) + 0.7
+    end = show.say("Can you guess the color?", show.say("Now let's play a guessing game!", t0 + 0.6, HOST) + 0.2,
+                   FRIEND) + 0.7
     show.add(Letters(show.title("Guessing Game!", 160), t0 + 0.1, end - 0.4, 960, 500))
     plinks(show, t0 + 0.1, "Guessing Game!")
     show.sfx(end - 0.4, sound.sfx_whoosh(), 0.3)
@@ -180,7 +196,7 @@ def guessing_game(show, items):
             answer = f"{name}! It's {a_or_an(color)} {color} {thing}!"
         else:
             answer = f"{name}! {PRAISE[(k // 2) % len(PRAISE)]}"
-        reveal = quiz_round(show, thing, color, answer)
+        reveal = quiz_round(show, thing, color, answer, asker=(HOST, FRIEND)[k % 2])
         if k == 0:
             show.snap(reveal + 0.6, "game: round 1")
 
@@ -189,22 +205,22 @@ def final_challenge(show, colors, bonus):
     """Kids say every color they learned. Then two new colors for next time."""
     show.chapter("Final challenge")
     t0 = show.t
-    end = show.say("Final challenge! Can you remember all the colors?", t0 + 0.6) + 0.7
+    end = show.say("Final challenge! Can you remember all the colors?", t0 + 0.6, HOST) + 0.7
     show.add(Letters(show.title("Final Challenge!", 160), t0 + 0.1, end - 0.4, 960, 500))
     plinks(show, t0 + 0.1, "Final Challenge!")
     show.sfx(end - 0.4, sound.sfx_whoosh(), 0.3)
 
     t = end + 0.2
-    xs = [1020 + (k - (len(colors) - 1) / 2) * 330 for k in range(len(colors))]
+    xs = [960 + (k - (len(colors) - 1) / 2) * 330 for k in range(len(colors))]
     starts, reveals = [], []
-    for color in colors:
+    for k, color in enumerate(colors):
         starts.append(t)
         show.sfx(t, sound.sfx_pop(), 0.35)
         reveals.append(t + 2.2)  # time for kids to say it
         show.sfx(t + 2.2, sound.sfx_plink(84), 0.3)
-        t = show.say(f"{color.capitalize()}!", t + 2.2) + 0.35
+        t = show.say(f"{color.capitalize()}!", t + 2.2, (HOST, FRIEND)[k % 2]) + 0.35
     wow = t + 0.1
-    end = show.say("Wow! You remember them all!", wow) + 0.9
+    end = show.say("Wow! You remember them all!", wow, HOST) + 0.9
     for k, color in enumerate(colors):
         spr, anc = show.splat(color)
         show.add(Actor(spr, anc, starts[k], end, xs[k], 470, scale=0.45, bob=6, wobble=3, phase=k,
@@ -214,20 +230,20 @@ def final_challenge(show, colors, bonus):
     q, qa = show.text("Say the color!", 90)
     show.add(Actor(q, qa, starts[0], end, *TOP))
     show.sfx(wow, sound.sfx_chime(), 0.5)
-    show.cheer(wow, (1020, 470), n=110)
+    show.cheer(wow, (960, 470), n=110, move="dance")
     show.sfx(end - 0.4, sound.sfx_whoosh(), 0.3)
     show.snap(wow + 0.6, "final")
 
     # Bonus: two new colors, so kids want to watch the next episode.
     t0 = end + 0.1
-    t = show.say("And here are two new colors!", t0 + 0.5)
-    spots = [(760, 500), (1260, 500)]
+    t = show.say("And here are two new colors!", t0 + 0.5, HOST)
+    spots = [(710, 500), (1210, 500)]
     shown = []
-    for thing, color, line in bonus:
+    for k, (thing, color, line) in enumerate(bonus):
         shown.append((thing, color, t + 0.3))
         show.sfx(t + 0.3, sound.sfx_pop(), 0.4)
-        t = show.say(line, t + 0.6)
-    nxt = show.say("We will learn them next time!", t + 0.3)
+        t = show.say(line, t + 0.6, (FRIEND, HOST)[k % 2])
+    nxt = show.say("We will learn them next time!", t + 0.3, (FRIEND, HOST)[len(bonus) % 2])
     end = nxt + 0.9
     for (thing, color, at), (x, y) in zip(shown, spots):
         spr, anc = show.thing(thing, color)
@@ -241,27 +257,32 @@ def final_challenge(show, colors, bonus):
     show.t = end + 0.1
 
 
-def goodbye(show, parade, lines=("Great job, friends! You know your colors!", "See you in the next video! Bye-bye!"),
-            title="Great job!"):
-    """Title, a row of happy things, and the lamb says goodbye. This ends the show."""
+GOODBYE_LINES = ((HOST, "Great job, friends! You know your colors!"), (FRIEND, "See you in the next video! Bye-bye!"))
+
+
+def goodbye(show, parade, lines=GOODBYE_LINES, title="Great job!"):
+    """Title, a row of happy things, and the puppy and the kitten wave goodbye. This ends the show."""
     show.chapter("Goodbye")
     t0 = show.t
     t = t0 + 0.9
-    for line in lines:
-        t = show.say(line, t) + 0.3
+    for who, line in lines:
+        start = t
+        t = show.say(line, t, who) + 0.3
     last = t - 0.3
     end = max(last + 3.0, t0 + 11)
+    for who in (HOST, FRIEND):
+        show.act(who, "wave", start, seconds=end - start)
     show.add(Letters(show.title(title, 170), t0 + 0.1, end + 5, 960, 250))
     plinks(show, t0 + 0.1, title)
     n = len(parade)
     for k, (thing, color) in enumerate(parade):
         at = t0 + 0.4 + 0.18 * k
         spr, anc = show.thing(thing, color)
-        show.add(Actor(spr, anc, at, end + 5, 1100 + (k - (n - 1) / 2) * 260, 600, scale=0.44, bob=18,
+        show.add(Actor(spr, anc, at, end + 5, 960 + (k - (n - 1) / 2) * 260, 600, scale=0.44, bob=18,
                        phase=-0.9 * k))
         show.sfx(at, sound.sfx_pop(), 0.3)
     show.happy_from = last
-    show.cheer(last + 0.1, (960, 250), n=110)
+    show.cheer(last + 0.1, (960, 250), n=110, move="happy")
     show.sfx(last + 0.1, sound.sfx_chime(), 0.45)
     show.loud_music.append((t0, end + 1))
     show.snap(last + 0.5, "goodbye")

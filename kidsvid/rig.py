@@ -73,11 +73,13 @@ class Character:
     """The puppy or the kitten, doing the movements it was given."""
     z = 3
 
-    def __init__(self, kind, colors, voice_pitch, seed=0):
+    def __init__(self, kind, colors, voice_pitch, seed=0, home=None, size=1.0):
+        """home: (x, y) of the feet on the screen. size: 1.0 = full size (about 500 pixels tall)."""
         self.kind = kind
         self.parts = art.puppy_parts(colors) if kind == "puppy" else art.kitten_parts(colors)
         self.pivots = art.PUPPY_PIVOTS if kind == "puppy" else art.KITTEN_PIVOTS
-        self.home, self.side = HOME[kind], SIDE[kind]
+        self.home, self.ground = home if home else (HOME[kind], GROUND)
+        self.side, self.size = SIDE[kind], size
         self.pitch = voice_pitch
         self.moves = []    # (start, end, name, options)
         self.talking = []  # (start, mouth opening for every frame)
@@ -95,6 +97,12 @@ class Character:
     def add(self, start, end, name, options):
         self.moves.append((start, end, name, options))
 
+    def act(self, move, at, seconds=None, options=()):
+        """Do a movement (a name from MOVES) at time `at`. Returns the time when it ends."""
+        end = at + (seconds or MOVES[move].length)
+        self.add(at, end, move, list(options))
+        return end
+
     def visible(self, t):
         walks = sorted(m for m in self.moves if m[2] in ("walk_in", "walk_out"))
         before = [m for m in walks if m[0] <= t]
@@ -105,7 +113,7 @@ class Character:
         return not (first and first[2] == "walk_in")
 
     def pose(self, t):
-        p = Pose(self.home, GROUND)
+        p = Pose(self.home, self.ground)
         breath = math.sin(2 * math.pi * 0.9 * t + self.phase)
         p.sy *= 1 + 0.012 * breath
         p.sx *= 1 - 0.008 * breath
@@ -123,17 +131,22 @@ class Character:
         return p
 
     def draw(self, fr, t):
-        if not self.visible(t):
-            return
-        p = self.pose(t)
+        if self.visible(t):
+            self.draw_pose(fr, self.pose(t))
+
+    def draw_pose(self, fr, p):
+        k = self.size
+        sx, sy = p.sx * k, p.sy * k
+        # Movements are in full-size pixels; a smaller character moves less.
+        px, py = self.home + (p.x - self.home) * k, self.ground + (p.y - self.ground) * k
         feet, center = art.PET_FEET, p.pivot or art.PET_BODY_CENTER
-        spin = (feet[0] + (center[0] - feet[0]) * p.sx, feet[1] + (center[1] - feet[1]) * p.sy)
+        spin = (feet[0] + (center[0] - feet[0]) * sx, feet[1] + (center[1] - feet[1]) * sy)
 
         def world(pt):  # a point of the character picture -> a point on the screen
-            x = feet[0] + (pt[0] - feet[0]) * p.sx
-            y = feet[1] + (pt[1] - feet[1]) * p.sy
+            x = feet[0] + (pt[0] - feet[0]) * sx
+            y = feet[1] + (pt[1] - feet[1]) * sy
             x, y = turn((x, y), spin, p.rot)
-            return x - feet[0] + p.x, y - feet[1] + p.y
+            return x - feet[0] + px, y - feet[1] + py
 
         head_pivot = self.pivots["head"]
 
@@ -143,7 +156,7 @@ class Character:
 
         def put(part, pivot, at, rot=0.0):  # `at`: where the part's pivot is in the character picture
             x, y = world(at)
-            place(fr, part.img, x, y, p.sx, p.sy, p.rot + rot, part.anchor(pivot))
+            place(fr, part.img, x, y, sx, sy, p.rot + rot, part.anchor(pivot))
 
         raised = []  # arms that are up go in front of the head and ears
         for name in art.PART_ORDER:
@@ -168,7 +181,8 @@ class Character:
         self.draw_marks(fr, p, world(on_head((300, 80))), world(on_head(MARK_SPOT)))
 
     def draw_marks(self, fr, p, top, spot):
-        m = marks()
+        m, k = marks(), self.size
+        big = 0.4 + 0.6 * k  # marks shrink less than the character, so they stay easy to see
         for kind, age in p.marks:
             if kind == "zzz":
                 for i, (spr, anchor) in enumerate(m["z"]):
@@ -176,19 +190,20 @@ class Character:
                     if a < 0:
                         continue
                     a %= 1.65
-                    size = (0.4 + 0.6 * clamp(a / 0.5)) * (1 - clamp((a - 1.2) / 0.45))
-                    place(fr, spr, spot[0] + 40 * a + 12 * math.sin(3 * a), spot[1] - 80 * a, size, anchor=anchor)
+                    grow = (0.4 + 0.6 * clamp(a / 0.5)) * (1 - clamp((a - 1.2) / 0.45))
+                    place(fr, spr, spot[0] + k * (40 * a + 12 * math.sin(3 * a)), spot[1] - k * 80 * a, big * grow,
+                          anchor=anchor)
             elif kind in ("!", "?"):
                 spr, anchor = m[kind]
-                place(fr, spr, spot[0], spot[1] + 6 * math.sin(6 * age),
-                      ease_out_back(clamp(age / 0.3), 2.5), rot=8 * math.sin(4 * age), anchor=anchor)
+                place(fr, spr, spot[0], spot[1] + k * 6 * math.sin(6 * age),
+                      big * ease_out_back(clamp(age / 0.3), 2.5), rot=8 * math.sin(4 * age), anchor=anchor)
             elif kind == "hearts":
                 for i in range(3):
                     a = age - i * 0.25
                     if 0 <= a < 1.2:
-                        size = (0.5 + 0.5 * clamp(a / 0.3)) * (1 - clamp((a - 0.8) / 0.4))
-                        place(fr, m["heart"], top[0] + (i - 1) * 100 + 20 * math.sin(3 * a + i),
-                              top[1] + 60 - 130 * a, size)
+                        grow = (0.5 + 0.5 * clamp(a / 0.3)) * (1 - clamp((a - 0.8) / 0.4))
+                        place(fr, m["heart"], top[0] + k * ((i - 1) * 100 + 20 * math.sin(3 * a + i)),
+                              top[1] + k * (60 - 130 * a), big * grow)
 
 
 # ---------- the movements ----------
@@ -196,7 +211,8 @@ class Character:
 def walk(entering):
     def pose(ch, p, s, d, options):
         side = next((o for o in options if o in ("left", "right")), ch.side)
-        far = -300 if side == "left" else W + 300  # just off the screen
+        edge = -300 * ch.size if side == "left" else W + 300 * ch.size  # just off the screen
+        far = ch.home + (edge - ch.home) / ch.size  # in full-size pixels, like all movements
         x0, x1 = (far, ch.home) if entering else (ch.home, far)
         u = clamp(s / d)
         p.x = x0 + (x1 - x0) * (1 - (1 - u) ** 2 if entering else u * u)

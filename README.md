@@ -15,7 +15,7 @@ No camera and no drawing app are needed.
 
 | Time | Part |
 | --- | --- |
-| 0:00 | Intro: things pop up at once (hook), "Let's Learn Colors!", the lamb says hello |
+| 0:00 | Intro: things pop up at once (hook), "Let's Learn Colors!", the puppy and the kitten walk in and say hello |
 | 0:11 | Red: meet the color, 3 red things, "Find the red one!", "Which one is not red?", 2 quiz rounds |
 | 0:55 | Blue (same parts) |
 | 1:38 | Yellow |
@@ -23,6 +23,9 @@ No camera and no drawing app are needed.
 | 3:06 | Guessing game: 10 questions, all colors mixed |
 | 4:28 | Final challenge: kids say every color, then 2 new colors for next time (orange, purple) |
 | 4:55 | Goodbye |
+
+The puppy (bottom left) and the kitten (bottom right) take turns saying the lines. They jump for joy at every
+right answer, tilt their heads while kids think, dance after the final challenge and wave goodbye.
 
 Kids get time to answer: the countdown is 3 seconds, and after "Can you say red?" there is a pause.
 The times move a little each time we make the video, because the AI voice is a little different each time.
@@ -32,7 +35,7 @@ The times move a little each time we make the video, because the AI voice is a l
 ```bash
 pip install -r requirements.txt
 python3 get_assets.py                # downloads the voice and the font
-python3 make_episode1.py             # makes output/episode1_learn_colors.mp4 (about 12 minutes)
+python3 make_episode1.py             # makes output/episode1_learn_colors.mp4 (about 20 minutes)
 python3 make_episode1.py --preview   # only still pictures (fast)
 ```
 
@@ -98,7 +101,7 @@ python3 foal3d.py --preview
 | `foal3d.py` | The foal in 3D (Blender) |
 | `kidsvid/lessons.py` | Building blocks: intro, color lesson, quiz round, guessing game, final challenge, goodbye |
 | `kidsvid/intro.py` | The intro: tunes, the singing jelly, the logo |
-| `kidsvid/show.py` | The engine: timeline, talking lamb, confetti, making the video file |
+| `kidsvid/show.py` | The engine: timeline, talking characters, confetti, making the video file |
 | `kidsvid/rig.py` | The moving puppy and kitten: their parts, and every movement (`MOVES`) |
 | `kidsvid/art.py` | Drawings: puppy and kitten (in parts), foal, lamb, jelly, cupcake, marshmallow, 14 things, background, text |
 | `kidsvid/sound.py` | AI voice, music, sound effects, mixing |

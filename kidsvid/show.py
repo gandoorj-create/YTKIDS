@@ -103,7 +103,8 @@ class Countdown:
 class Show:
     def __init__(self, voice, seed=1, mascot=True):
         self.voice = voice
-        self.mascot = mascot     # False: no lamb (for example in the channel intro)
+        self.mascot = mascot     # True: the lamb in the corner talks (older videos)
+        self.cast = {}           # characters that talk and move, by name (see rig.py and join)
         self.music = None        # own music track (numpy array); None = the normal background music
         self.music_level = 0.075
         self.duck = 0.35         # how much the music goes down while someone talks
@@ -111,7 +112,7 @@ class Show:
         self.actors = []
         self.voices = []         # (time, clip)
         self.effects = []        # (time, sound, gain)
-        self.cheers = []         # times when the lamb jumps for joy
+        self.cheers = []         # happy moments: the characters (or the lamb) jump for joy
         self.bursts = []         # confetti: (time, origin, pieces)
         self.chapters = []       # (time, name)
         self.snaps = []          # (time, name): moments for the preview pictures
@@ -126,13 +127,30 @@ class Show:
 
     # ----- putting things on the timeline -----
 
-    def say(self, text, at):
-        """Voice line at time `at`. Returns the time when it ends."""
-        if text not in self._clips:
-            self._clips[text] = self.voice.say(text)
-        clip = self._clips[text]
+    def join(self, character):
+        """Put a character (see rig.Character) in the show. Lines and movements can then use its name."""
+        self.cast[character.kind] = character
+        self.add(character)
+
+    def say(self, text, at, who=None):
+        """Voice line at time `at`, said by `who` (a character's name). Returns the time when it ends.
+
+        Without that character in the show, the normal voice says it (and the lamb's mouth moves).
+        """
+        speaker = self.cast.get(who)
+        key = (who if speaker else None, text)
+        if key not in self._clips:
+            self._clips[key] = speaker.say(self.voice, text) if speaker else self.voice.say(text)
+        clip = self._clips[key]
         self.voices.append((at, clip))
+        if speaker:
+            speaker.talking.append((at, sound.mouth_levels(clip, FPS)))
         return at + len(clip) / sound.SR
+
+    def act(self, who, move, at, seconds=None):
+        """A movement of a character (a name from rig.MOVES), if that character is in the show."""
+        if who in self.cast:
+            self.cast[who].act(move, at, seconds)
 
     def sfx(self, at, sig, gain=0.4):
         self.effects.append((at, sig, gain))
@@ -161,9 +179,14 @@ class Show:
     def title(self, words, size=160):
         return self._cached(("title", words, size), lambda: art.title_letters(words, size))
 
-    def cheer(self, at, origin=None, n=70):
-        """Happy moment: the lamb jumps, and confetti flies from `origin`."""
+    def cheer(self, at, origin=None, n=70, move=None):
+        """Happy moment: the characters jump for joy, and confetti flies from `origin`.
+
+        move: what the characters do (a name from rig.MOVES). None: "happy" and "jump", taking turns.
+        """
         self.cheers.append(at)
+        for k, who in enumerate(self.cast):
+            self.act(who, move or ("happy", "jump")[(len(self.cheers) + k) % 2], at)
         if origin is None:
             return
         pieces = []
