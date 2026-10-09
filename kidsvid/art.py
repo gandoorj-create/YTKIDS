@@ -617,6 +617,84 @@ def grapes(color):
     return c.result(), (230, 260)
 
 
+def carrot(color):
+    c = Canvas(440, 540)
+    for x, y, a in ((170, 112, -118), (270, 112, -62), (220, 92, -90)):
+        outlined(c, leaf_pts(x, y, 130, 46, a), LEAF_GREEN, shade(LEAF_GREEN, 0.7), 4)
+    line = shade(color, 0.72)
+    outlined(c, [(96, 170), (344, 170), (232, 470), (208, 470)], color, line, 5, rounding=70)
+    for y, side in ((326, 1), (378, -1), (426, 1)):  # little lines on the skin
+        x = 220 + side * (118 - (y - 170) * 0.373)
+        c.line([(x, y), (x - side * 28, y + 3)], line, 6)
+    shine(c, 148, 214, 16, 40, 20)
+    cute_face(c, color, 220, 252, 44, 17, 22, 68, 40, 50)
+    return c.result(), (220, 300)
+
+
+def pumpkin(color):
+    c = Canvas(500, 470)
+    line = shade(color, 0.72)
+    c.rounded_rect(226, 72, 274, 150, 14, (110, 140, 60))
+    c.rounded_rect(231, 77, 269, 145, 11, (140, 170, 80))
+    outlined(c, leaf_pts(318, 104, 100, 42, -20), LEAF_GREEN, shade(LEAF_GREEN, 0.7), 3)
+    for x, rx in ((112, 98), (388, 98), (174, 112), (326, 112), (250, 120)):  # the ribs: outer ones first
+        outlined(c, ellipse_pts(x, 288, rx, 150), color, line, 5)
+    shine(c, 196, 206, 16, 36, 25)
+    cute_face(c, color, 250, 284, 48, 18, 23, 76, 44, 56)
+    return c.result(), (250, 288)
+
+
+def flower(color):
+    c = Canvas(460, 580)
+    stem = (90, 160, 70)
+    c.line([(230, 300), (226, 420), (232, 550)], shade(stem, 0.7), 22)
+    c.line([(230, 300), (226, 420), (232, 550)], stem, 14)
+    outlined(c, leaf_pts(298, 448, 118, 50, -28), LEAF_GREEN, shade(LEAF_GREEN, 0.7), 4)
+    outlined(c, leaf_pts(162, 488, 108, 46, 208), LEAF_GREEN, shade(LEAF_GREEN, 0.7), 4)
+    line = shade(color, 0.72)
+    petals = [(230 + 120 * math.cos(a), 214 + 120 * math.sin(a))
+              for a in (math.radians(-90 + 72 * k) for k in range(5))]
+    for x, y in petals:
+        c.circle(x, y, 84, fill=line)
+    for x, y in petals:
+        c.circle(x, y, 78, fill=color)
+    middle = (255, 214, 90)
+    c.circle(230, 214, 92, fill=shade(middle, 0.75))
+    c.circle(230, 214, 86, fill=middle)
+    cute_face(c, middle, 230, 210, 38, 14, 18, 56, 32, 42)
+    return c.result(), (230, 260)
+
+
+def pig(color):
+    c = Canvas(480, 500)
+    line = shade(color, 0.72)
+    for x in (140, 196, 284, 340):  # little legs
+        c.rounded_rect(x - 30, 380, x + 30, 470, 22, line)
+        c.rounded_rect(x - 25, 385, x + 25, 465, 18, shade(color, 0.9))
+        c.rounded_rect(x - 25, 440, x + 25, 465, 12, shade(color, 0.6))
+    for side in (-1, 1):  # ears
+        tip, inner = (240 + side * 150, 52), (240 + side * 100, 124)
+        outlined(c, [(240 + side * 172, 150), tip, (240 + side * 62, 110)], color, line, 5, rounding=24)
+        outlined(c, [(240 + side * 146, 138), (240 + side * 138, 84), inner], shade(color, 0.85), line, 3,
+                 rounding=12)
+    c.circle(240, 262, 178, fill=line)
+    c.circle(240, 262, 172, fill=color)
+    shine(c, 152, 162, 20, 42, 35)
+    eyes(c, 240, 212, 56, 16, 21)
+    blush(c, [(130, 268, 26, 15), (350, 268, 26, 15)], blush_color(color))
+    c.ellipse(240, 300, 74, 52, fill=line)
+    c.ellipse(240, 300, 69, 47, fill=shade(color, 1.18))
+    for side in (-1, 1):
+        c.ellipse(240 + side * 25, 300, 11, 17, fill=shade(color, 0.55))
+    smile(c, 240, 368, 40, 18, 6)
+    return c.result(), (240, 262)
+
+
+def cupcake_thing(color):
+    """The cupcake as a thing to learn: the frosting has the color, the cup is cream."""
+    return cupcake(frosting=color, cup=(255, 240, 222)), (250, 300)
+
+
 def splat(color, seed=0):
     """A round paint splash with a happy face: the "color friend"."""
     c = Canvas(600, 560)
@@ -653,7 +731,8 @@ COLORS = {"red": RED, "orange": ORANGE, "yellow": YELLOW, "green": GREEN,
           "blue": BLUE, "purple": PURPLE, "pink": PINK}
 THINGS = {"balloon": balloon, "star": star, "frog": frog, "fish": fish, "apple": apple, "car": car,
           "ball": ball, "bird": bird, "banana": banana, "duck": duck, "leaf": leaf, "tree": tree,
-          "orange": orange_fruit, "grapes": grapes}
+          "orange": orange_fruit, "grapes": grapes, "carrot": carrot, "pumpkin": pumpkin, "flower": flower,
+          "pig": pig, "cupcake": cupcake_thing}
 
 
 # ---------- mascot ideas: food characters ----------

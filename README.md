@@ -34,6 +34,26 @@ end screens and no notification bell on YouTube. It asks a grown-up, not the chi
 Kids get time to answer: the countdown is 3 seconds, and after "Can you say red?" there is a pause.
 The times move a little each time we make the video, because the AI voice is a little different each time.
 
+## Episode 2: "Learn Colors for Kids Part 2" (about 4.5 minutes)
+
+Episode 1 ends with "orange and purple next time", so Episode 2 teaches orange, purple and pink, in the same
+parts as Episode 1. New things to learn with: a carrot and a pumpkin (orange), a flower, a pig and a cupcake.
+
+| Time | Part |
+| --- | --- |
+| 0:00 | Channel intro, then "Let's Learn New Colors!", Maple and Domi say hello |
+| 0:15 | Orange: carrot, pumpkin, fish |
+| 1:01 | Purple: grapes, flower, balloon |
+| 1:45 | Pink: pig, cupcake, ball |
+| 2:27 | Guessing game: 10 questions, the new colors and the old ones |
+| 3:49 | Final challenge: kids say all seven colors |
+| 4:16 | Goodbye and the end card |
+
+```bash
+python3 make_episode2.py             # output/episode2_more_colors.mp4
+python3 make_episode2.py --preview   # only still pictures (fast)
+```
+
 ## Make it on your own computer (Windows)
 
 1. Install Python 3.10 or newer from python.org (tick "Add Python to PATH").
@@ -63,8 +83,10 @@ python3 make_episode1.py --no-intro  # without the channel intro at the start
 without the intro. The chapters are also inside both video files (video players show them, and `make_short.py`
 uses them).
 
-To make a new episode, copy `make_episode1.py` and change the lists at the top (colors, things, questions).
-To add a new thing (for example a car), add a drawing function to `kidsvid/art.py` and put it in `THINGS`.
+To make a new episode, copy `make_episode2.py` and change the lists at the top (colors, things, questions) and
+the YouTube text. What every episode needs (Maple and Domi, the channel intro, making the files) is in
+`kidsvid/episode.py`. To add a new thing (for example a car), add a drawing function to `kidsvid/art.py` and put
+it in `THINGS`. A thing with a plural name (like grapes) goes in `PLURAL` in `kidsvid/lessons.py`.
 
 ## Scenes: choose the movements
 
@@ -165,6 +187,37 @@ python3 make_shorts.py             # output/shorts/short_1.mp4, short_2.mp4 and 
 python3 make_shorts.py --preview   # only still pictures (fast)
 ```
 
+## Songs: "The Colors Song" (a test)
+
+Maple and Domi sing our own song (our words, our tune):
+
+```text
+Colors, colors, everywhere!        (both)
+Colors, colors, here and there!
+I see red!          I see red!     (Maple sings, Domi sings it back)
+A red, red car!     A red, red car!
+Yay!
+```
+
+```bash
+python3 make_song.py             # output/colors_song_test.mp4 (about 28 seconds)
+python3 make_song.py --preview   # only still pictures (fast, without singing)
+```
+
+The chorus uses the easy "sol-mi" tune that children sing everywhere in their games. In the verses Domi sings
+back what Maple sings, so kids at home can sing back too. The words of the line are at the top, and each word
+lights up when it is sung (a color word lights up in its own color). Seven color friends pop up, one on every
+syllable of the chorus.
+
+How the singing works (`kidsvid/sing.py`): the AI voice says each word; a word with more syllables is written
+with "-" ("col-", "ors") and is cut at the quiet places between its vowels. WORLD (`pyworld`) puts each syllable
+on its note and makes the vowel as long as the note. The notes come out within a few cents (1/100 of a
+semitone) of the right pitch. Maple's and Domi's voices are made smaller (higher voice color), and each one
+says the words in its own way. The band (`kidsvid/song.py`) plays bass, chords, drums and bells that play the
+tune. The singing needs `pyworld`, so songs cannot be made on Windows.
+
+The test is the start of the song. The other colors' verses come after it, in the same way.
+
 ## Channel pictures
 
 `python3 make_channel_art.py` makes the YouTube profile picture `channel_avatar.png` (800x800, YouTube shows it
@@ -190,6 +243,8 @@ python3 foal3d.py --preview
 | File | What it does |
 | --- | --- |
 | `make_episode1.py` | Episode 1: which parts, colors and things |
+| `make_episode2.py` | Episode 2: orange, purple and pink |
+| `make_song.py` | The Colors Song (the start, a test) |
 | `make_scene.py` | A video from a scene file (the movements you choose) |
 | `scenes/` | Scene files: `example.txt`, `catalog.txt` (every movement) |
 | `make_short.py`, `make_short.bat` | 2-3 YouTube Shorts from any video (drag a video onto the `.bat`) |
@@ -198,12 +253,14 @@ python3 foal3d.py --preview
 | `make_intro.py` | The channel intro, "Peek-a-boo! Yu-mi-zoo!" (3 surprises) |
 | `foal3d.py` | The foal in 3D (Blender) |
 | `kidsvid/lessons.py` | Building blocks: intro, color lesson, quiz round, guessing game, final challenge, goodbye |
+| `kidsvid/episode.py` | What every episode needs: Maple and Domi, the channel intro, the thumbnail, making the files |
+| `kidsvid/song.py` | Songs: singing lines, the band, the words on the screen |
 | `kidsvid/endcard.py` | The end card: like and subscribe buttons, the tapping paw |
 | `kidsvid/intro.py` | The intro: the tune, the hill, the peeking puppy and kitten, the logo |
-| `kidsvid/sing.py` | Singing: puts the AI voice on musical notes (WORLD vocoder) |
+| `kidsvid/sing.py` | Singing: puts the AI voice on musical notes (WORLD vocoder), cuts words into syllables |
 | `kidsvid/show.py` | The engine: timeline, talking characters, confetti, making the video file |
 | `kidsvid/rig.py` | The moving puppy and kitten: their parts, and every movement (`MOVES`) |
-| `kidsvid/art.py` | Drawings: puppy and kitten (in parts), foal, lamb, jelly, cupcake, marshmallow, 14 things, background, text |
+| `kidsvid/art.py` | Drawings: puppy and kitten (in parts), foal, lamb, jelly, cupcake, marshmallow, 19 things, background, text |
 | `kidsvid/sound.py` | AI voice, music, sound effects, mixing |
 | `kidsvid/anim.py` | Animation helpers (movement curves, placing pictures) |
 | `make_demo.py` | The first 42-second demo (older code, made before the engine) |

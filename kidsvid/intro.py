@@ -225,9 +225,10 @@ def voices(voice):
     answer = [(b * BEAT, s, n, d * BEAT) for b, s, n, d in ANSWER]
     puppy = sing.sing(voice, call, LENGTH, formant=2 ** (3 / 12)) \
         + 0.6 * sing.sing(voice, answer, LENGTH, formant=2 ** (3 / 12))
-    kitten = sing.sing(voice, call, LENGTH, formant=2 ** (6 / 12), detune=8, late=0.012) \
-        + 0.6 * sing.sing(voice, answer, LENGTH, formant=2 ** (6 / 12), detune=8, late=0.012)
-    kids = sum(gain * sing.sing(voice, answer, LENGTH, formant=f, detune=c, late=late) for f, c, late, gain in KIDS)
+    kitten = sing.sing(voice, call, LENGTH, formant=2 ** (6 / 12), detune=8, late=0.012, take=1) \
+        + 0.6 * sing.sing(voice, answer, LENGTH, formant=2 ** (6 / 12), detune=8, late=0.012, take=1)
+    kids = sum(gain * sing.sing(voice, answer, LENGTH, formant=f, detune=c, late=late, take=2 + k)
+               for k, (f, c, late, gain) in enumerate(KIDS))
     kids = kids / np.max(np.abs(kids))
     mix = puppy + 0.85 * kitten + 1.1 * kids
     level = sound.smooth(np.abs(mix), int(0.01 * sound.SR))

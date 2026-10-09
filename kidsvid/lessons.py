@@ -18,8 +18,16 @@ def other(who):
     return FRIEND if who == HOST else HOST
 
 
+PLURAL = {"grapes"}  # said without "a": "purple grapes" (do not use them in quiz rounds: "this grapes")
+
+
 def a_or_an(word):
     return "an" if word[0] in "aeiou" else "a"
+
+
+def some(color, thing):
+    """ "a red apple", "an orange carrot", "purple grapes"."""
+    return f"{color} {thing}" if thing in PLURAL else f"{a_or_an(color)} {color} {thing}"
 
 
 def plinks(show, at, words):
@@ -145,7 +153,7 @@ def color_lesson(show, color, things, find, odd, quiz_things):
     for k, thing in enumerate(things):
         starts.append(t)
         show.sfx(t, sound.sfx_pop(), 0.35)
-        t = show.say(f"{a_or_an(color).capitalize()} {color} {thing}!", t + 0.35, (HOST, FRIEND)[k % 2]) + 0.3
+        t = show.say(f"{some(color, thing).capitalize()}!", t + 0.35, (HOST, FRIEND)[k % 2]) + 0.3
     together = t + 0.1
     end = show.say(f"They are all {color}!", together, (HOST, FRIEND)[len(things) % 2]) + 0.8
     for k, thing in enumerate(things):
@@ -202,8 +210,8 @@ def guessing_game(show, items):
             show.snap(reveal + 0.6, "game: round 1")
 
 
-def final_challenge(show, colors, bonus):
-    """Kids say every color they learned. Then two new colors for next time."""
+def final_challenge(show, colors, bonus=()):
+    """Kids say every color they learned (up to 7). Then maybe two new colors for next time."""
     show.chapter("Final challenge")
     t0 = show.t
     end = show.say("Final challenge! Can you remember all the colors?", t0 + 0.6, HOST) + 0.7
@@ -212,7 +220,10 @@ def final_challenge(show, colors, bonus):
     show.sfx(end - 0.4, sound.sfx_whoosh(), 0.3)
 
     t = end + 0.2
-    xs = [960 + (k - (len(colors) - 1) / 2) * 330 for k in range(len(colors))]
+    gap = min(330, 1560 / max(1, len(colors) - 1))  # closer together when there are many colors,
+    small = gap / 330                                # and smaller and higher (above Maple's and Domi's heads)
+    xs = [960 + (k - (len(colors) - 1) / 2) * gap for k in range(len(colors))]
+    y, word_y = (470, 690) if small == 1 else (420, 600)
     starts, reveals = [], []
     for k, color in enumerate(colors):
         starts.append(t)
@@ -224,16 +235,20 @@ def final_challenge(show, colors, bonus):
     end = show.say("Wow! You remember them all!", wow, HOST) + 0.9
     for k, color in enumerate(colors):
         spr, anc = show.splat(color)
-        show.add(Actor(spr, anc, starts[k], end, xs[k], 470, scale=0.45, bob=6, wobble=3, phase=k,
+        show.add(Actor(spr, anc, starts[k], end, xs[k], y, scale=0.45 * small, bob=6, wobble=3, phase=k,
                        jumps=[reveals[k], wow]))
-        word, wa = show.text(color.capitalize(), 84, art.COLORS[color])
-        show.add(Actor(word, wa, reveals[k], end, xs[k], 690))
+        word, wa = show.text(color.capitalize(), round(84 * small), art.COLORS[color])
+        show.add(Actor(word, wa, reveals[k], end, xs[k], word_y))
     q, qa = show.text("Say the color!", 90)
     show.add(Actor(q, qa, starts[0], end, *TOP))
     show.sfx(wow, sound.sfx_chime(), 0.5)
-    show.cheer(wow, (960, 470), n=110, move="dance")
+    show.cheer(wow, (960, y), n=110, move="dance")
     show.sfx(end - 0.4, sound.sfx_whoosh(), 0.3)
     show.snap(wow + 0.6, "final")
+
+    if not bonus:
+        show.t = end + 0.1
+        return
 
     # Bonus: two new colors, so kids want to watch the next episode.
     t0 = end + 0.1
