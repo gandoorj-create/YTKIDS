@@ -9,3 +9,4 @@ brotli
 # (on Windows that needs a C++ compiler, so make_episode1.py uses the ready-made intro in assets/intro)
 # 3D (foal3d.py) also needs Blender as a Python module (about 370 MB):
 # bpy
+# praat-parselmouth  # optional: songs with the PSOLA singing (make_song.py)

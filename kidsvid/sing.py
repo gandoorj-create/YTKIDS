@@ -50,18 +50,23 @@ def take(rows, pos):
 
 
 @lru_cache(maxsize=None)
+def said(voice, text, take=0):
+    """The voice saying `text`. It says a word a little differently every time: each `take` is one way."""
+    return voice.say(text, slow=1.0, pitch=0)
+
+
+@lru_cache(maxsize=None)
 def analyse(voice, text, take=0):
-    """WORLD parts of the voice saying `text`: (pitch, voice color, breath), one row every FRAME ms.
-    The voice says a word a little differently every time: each `take` is one way of saying it."""
-    x = voice.say(text, slow=1.0, pitch=0)
+    """WORLD parts of the voice saying `text`: (pitch, voice color, breath), one row every FRAME ms."""
+    x = said(voice, text, take)
     f0, times = pw.harvest(x, sound.SR, frame_period=FRAME)
     return f0, pw.cheaptrick(x, f0, times, sound.SR), pw.d4c(x, f0, times, sound.SR)
 
 
-def split(f0, sp, n):
+def split(f0, loud, n):
     """Where to cut a word into n syllables: frame numbers [0, cut, ..., end]. Each syllable has one vowel
-    (a loud voiced part); the cut is at the quietest moment between two vowels."""
-    loud = np.convolve(np.log(sp.sum(axis=1) + 1e-12), np.ones(5) / 5, mode="same")
+    (a loud voiced part); the cut is at the quietest moment between two vowels. loud: log loudness per frame."""
+    loud = np.convolve(loud, np.ones(5) / 5, mode="same")
     level = np.where(f0 > 0, loud, -np.inf)
     peaks = []
     for _ in range(n):
@@ -103,6 +108,64 @@ def syllable(voice, text, note, seconds, formant=1.0, detune=0.0, vibrato=0.0):
     return sung(*analyse(voice, text), note, seconds, formant, detune, vibrato)
 
 
+def psola(x, cuts, notes, detune=0.0, vibrato=0.3):
+    """A sung word, made with Praat's PSOLA (overlap-add): it keeps the voice's own sound waves and only moves
+    them closer or further apart, so the consonants stay clear. `pip install praat-parselmouth`.
+
+    x: the word (a sound); cuts: where its syllables start and end (frame numbers, see split);
+    notes: [(seconds until the next syllable's beat, MIDI note)] for each syllable (for the last one: how long
+    its note is). Every vowel lands on its beat and lasts until the next one; the consonants before a vowel
+    come just before its beat. Returns (sound, when the first vowel starts)."""
+    import parselmouth
+    from parselmouth.praat import call
+    sec = FRAME / 1000
+    f0, _ = pw.harvest(x, sound.SR, frame_period=FRAME)
+    dur = len(x) / sound.SR
+    regions = []  # (start, vowel start, vowel end, end) of each syllable, in seconds of the spoken word
+    for a, b in zip(cuts, cuts[1:]):
+        idx = a + np.flatnonzero(f0[a:b] > 0)
+        if len(idx) >= 12:
+            regions.append((a * sec, (idx[0] + 4) * sec, (idx[-1] - 4) * sec, min(b * sec, dur)))
+        else:  # (hardly any voice) the middle of it is the "vowel"
+            regions.append((a * sec, (0.7 * a + 0.3 * b) * sec, (0.3 * a + 0.7 * b) * sec, min(b * sec, dur)))
+    heads = [min(v0 - s0, MAX_HEAD) for s0, v0, _, _ in regions]
+    tails = [min(e - v1, MAX_TAIL) for _, _, v1, e in regions]
+    vowels = [max(0.05, gap - tails[k] - (heads[k + 1] if k + 1 < len(regions) else 0))
+              for k, (gap, _) in enumerate(notes)]
+
+    # Praat makes a sound at most 3 times as long as the one it gets, so add silence at the end first
+    # (it is cut off again below).
+    sung_length = sum(heads) + sum(vowels) + sum(tails) + (dur - regions[-1][3])
+    x = np.concatenate([x, np.zeros(int(max(0.0, sung_length / 3 - dur + 0.1) * sound.SR))])
+    snd = parselmouth.Sound(x, sound.SR)
+    manip = call(snd, "To Manipulation", 0.01, 75, 900)
+    pitch = call(snd, "To Pitch (ac)", 0.005, 75, 15, "no", 0.03, 0.25, 0.01, 0.35, 0.14, 900)
+    call([manip, call([snd, pitch], "To PointProcess (cc)")], "Replace pulses")  # find the weak voiced parts too
+    lengths = call("Create DurationTier", "lengths", 0, len(x) / sound.SR)
+    call(lengths, "Add point", regions[-1][3] + 1e-4, 1.0)  # the end and the added silence: as they are
+    tier = call("Create PitchTier", "pitch", 0, len(x) / sound.SR)
+    for (s0, v0, v1, e), head, vowel, tail, (_, note) in zip(regions, heads, vowels, tails, notes):
+        for t0, t1, k in ((s0, v0, head / max(v0 - s0, 1e-3)), (v0, v1, vowel / max(v1 - v0, 1e-3)),
+                          (v1, e, tail / max(e - v1, 1e-3))):
+            call(lengths, "Add point", t0 + 1e-4, k)
+            call(lengths, "Add point", max(t0 + 2e-4, t1 - 1e-4), k)
+        k = vowel / max(v1 - v0, 1e-3)
+        long = vowel >= 0.45
+        for u in np.arange(0, vowel, 0.005):  # u: seconds since the vowel started, in the sung word
+            p = note + detune / 100 - 0.5 * np.exp(-u / 0.025)  # a tiny scoop up into the note
+            if long:
+                p += vibrato * np.sin(2 * np.pi * 5.5 * u) * np.clip((u - 0.25) / 0.2, 0, 1)
+            call(tier, "Add point", v0 + u / k, float(sound.hz(p)))
+        call(tier, "Add point", s0 + 1e-3, float(sound.hz(note - 0.5)))  # the consonants: on the note too
+        call(tier, "Add point", e - 1e-3, float(sound.hz(note)))
+    call([manip, tier], "Replace pitch tier")
+    call([manip, lengths], "Replace duration tier")
+    y = call(manip, "Get resynthesis (overlap-add)").values[0].astype(np.float64)[:int(sung_length * sound.SR)]
+    f = int(0.012 * sound.SR)
+    y[-f:] *= np.linspace(1, 0, f)
+    return 0.9 * y / (np.max(np.abs(y)) + 1e-9), heads[0]
+
+
 def words(notes):
     """Notes grouped into words: a syllable that ends with "-" goes on in the next note."""
     group = []
@@ -115,19 +178,37 @@ def words(notes):
         yield group
 
 
-def sing(voice, notes, length, formant=1.0, detune=0.0, vibrato=0.3, late=0.0, take=0):
+def sing(voice, notes, length, formant=1.0, detune=0.0, vibrato=0.3, late=0.0, take=0, engine="world"):
     """A sung line. notes: [(time, syllable, MIDI note, seconds), ...]. Returns a sound `length` seconds long.
 
     A word with more syllables is written with "-": "col-", "ors" is "colors", said once and cut in two.
     late: seconds this singer comes in after the others (for a choir).
     take: which way of saying the words (give every singer their own, so a choir is not one voice).
+    engine: "world" (WORLD builds the voice again) or "psola" (Praat keeps the voice's own sound waves; for a
+    smaller voice the word is played faster first, which makes the voice color and the pitch higher).
     """
     out = np.zeros(int(length * sound.SR))
     for word in words(notes):
-        f0, sp, ap = analyse(voice, "".join(text.rstrip("-") for _, text, _, _ in word), take)
-        cuts = split(f0, sp, len(word)) if len(word) > 1 else [0, len(f0)]
-        for (at, _, note, seconds), a, b in zip(word, cuts, cuts[1:]):
-            wobble = vibrato if seconds >= 0.45 else 0.0
-            y, vowel = sung(f0[a:b], sp[a:b], ap[a:b], note, seconds, formant, detune, wobble)
+        text = "".join(syl.rstrip("-") for _, syl, _, _ in word)
+        if engine == "psola":
+            x = said(voice, text, take)
+            if formant != 1.0:
+                x = sound.resample(x, round(len(x) / formant))
+            f0, _ = pw.harvest(x, sound.SR, frame_period=FRAME)
+            hop = int(sound.SR * FRAME / 1000)
+            loud = np.log(np.array([np.mean(x[i * hop:(i + 1) * hop] ** 2) + 1e-12 for i in range(len(f0))]))
+            cuts = split(f0, loud, len(word)) if len(word) > 1 else [0, len(f0)]
+            gaps = [nxt[0] - at for (at, *_), nxt in zip(word, word[1:])] + [word[-1][3]]
+            y, vowel = psola(x, cuts, [(gap, note) for gap, (_, _, note, _) in zip(gaps, word)], detune, vibrato)
+            sound.add(out, y, word[0][0] + late - vowel)
+            continue
+        else:
+            f0, sp, ap = analyse(voice, text, take)
+            loud = np.log(sp.sum(axis=1) + 1e-12)
+            cuts = split(f0, loud, len(word)) if len(word) > 1 else [0, len(f0)]
+            pieces = [sung(f0[a:b], sp[a:b], ap[a:b], note, seconds, formant, detune,
+                           vibrato if seconds >= 0.45 else 0.0)
+                      for (_, _, note, seconds), a, b in zip(word, cuts, cuts[1:])]
+        for (at, *_), (y, vowel) in zip(word, pieces):
             sound.add(out, y, at + late - vowel)  # singers put the vowel on the beat, the consonant before it
     return out

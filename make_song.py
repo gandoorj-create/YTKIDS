@@ -50,7 +50,9 @@ def cast():
             rig.Character("kitten", "tuxedo", voice_pitch=6, seed=2, home=(1360, 1050), size=0.85))
 
 
-def build(voice, sing=True):
+def build(voice, sing=True, engine="psola", clean=True):
+    """The song. engine and clean: how the singing is made (see song.vocals); the first test used
+    engine="world", clean=False."""
     length = END * BEAT + 1.5
     show = Show(voice, mascot=False)
     for character in cast():
@@ -59,8 +61,8 @@ def build(voice, sing=True):
     show.music = song.band(BEAT, length, CHORDS, INTRO_TUNE + tune)
     show.music_level, show.duck, show.fade = 0.09, 1.0, 0.6  # the singing is about 7 dB louder
     if sing:
-        parts = song.vocals(voice, LINES, BEAT, length)
-        show.voices.append((0.0, song.mix_vocals(parts)))
+        parts = song.vocals(voice, LINES, BEAT, length, engine, clean)
+        show.voices.append((0.0, song.mix_vocals(parts, compress=not clean)))
         for name, part in parts.items():
             show.cast[name].talking.append((0.0, sound.mouth_levels(part, FPS)))
     show.add(song.Karaoke(LINES, BEAT))

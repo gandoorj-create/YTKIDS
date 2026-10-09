@@ -29,24 +29,31 @@ def singers(who):
     return ["puppy", "kitten"] if who == "both" else [who]
 
 
-def vocals(voice, lines, beat, length):
-    """The singing of every character: {name: sound}. Lines for "both" are sung by both."""
+def vocals(voice, lines, beat, length, engine="world", clean=False):
+    """The singing of every character: {name: sound}. Lines for "both" are sung by both.
+
+    clean: when both sing, they say the words the same way (one take) at the same moment, so the consonants
+    do not come twice (the first test had them a little apart: that made the words blurry)."""
     from . import sing  # needs pyworld
     parts = {}
     for who, _, notes in lines:
         timed = [(b * beat, text, note, n * beat) for b, text, note, n in notes]
         for name in singers(who):
-            late = 0.012 if who == "both" and name == "kitten" else 0.0
-            y = sing.sing(voice, timed, length, late=late, **SINGERS[name])
+            style = dict(SINGERS[name])
+            if clean:
+                style["take"] = 0
+            late = 0.012 if who == "both" and name == "kitten" and not clean else 0.0
+            y = sing.sing(voice, timed, length, late=late, engine=engine, **style)
             parts[name] = parts.get(name, 0) + (0.85 if who == "both" else 1.0) * y
     return parts
 
 
-def mix_vocals(parts):
-    """All singing in one track, with a gentle compressor: even and clear."""
+def mix_vocals(parts, compress=True):
+    """All singing in one track. compress: a fast compressor makes it even (the first test used it)."""
     mix = sum(parts.values())
-    level = sound.smooth(np.abs(mix), int(0.01 * sound.SR))
-    mix = mix * np.clip((0.3 / (level + 1e-4)) ** 0.4, 0.6, 2.0)
+    if compress:
+        level = sound.smooth(np.abs(mix), int(0.01 * sound.SR))
+        mix = mix * np.clip((0.3 / (level + 1e-4)) ** 0.4, 0.6, 2.0)
     return 0.9 * mix / np.max(np.abs(mix))
 
 
